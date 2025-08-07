@@ -46,7 +46,23 @@ function validateApiKey(key, provider) {
     return { valid: false, error: `API key length invalid for ${providerConfig.name}` };
   }
   
-  if (!providerConfig.keyPattern.test(trimmed)) {
+  // Check format based on provider
+  let isValidFormat = false;
+  switch (provider) {
+    case 'claude':
+      isValidFormat = trimmed.startsWith('sk-ant-') && trimmed.length > 20;
+      break;
+    case 'openai':
+      isValidFormat = trimmed.startsWith('sk-') && trimmed.length > 20;
+      break;
+    case 'gemini':
+      isValidFormat = trimmed.length > 20; // Gemini keys are just long strings
+      break;
+    default:
+      isValidFormat = trimmed.length > 10; // Generic validation
+  }
+  
+  if (!isValidFormat) {
     let formatHint = '';
     switch (provider) {
       case 'claude':
@@ -273,12 +289,15 @@ async function testApiConnection(apiKey, provider) {
 // Enhanced storage operations with error handling
 async function safeStorageGet(keys) {
   try {
+    console.log('Getting from storage:', keys);
     const promise = browser.storage.local.get(keys);
     const timeout = new Promise((_, reject) => 
       setTimeout(() => reject(new Error('Storage timeout')), VALIDATION.timeout)
     );
     
-    return await Promise.race([promise, timeout]);
+    const result = await Promise.race([promise, timeout]);
+    console.log('Storage get result:', result);
+    return result;
   } catch (error) {
     console.error('Storage get error:', error);
     throw new Error('Unable to access extension storage');
@@ -287,12 +306,14 @@ async function safeStorageGet(keys) {
 
 async function safeStorageSet(data) {
   try {
+    console.log('Setting storage data:', data);
     const promise = browser.storage.local.set(data);
     const timeout = new Promise((_, reject) => 
       setTimeout(() => reject(new Error('Storage timeout')), VALIDATION.timeout)
     );
     
-    return await Promise.race([promise, timeout]);
+    await Promise.race([promise, timeout]);
+    console.log('Storage set successful');
   } catch (error) {
     console.error('Storage set error:', error);
     throw new Error('Unable to save to extension storage');
@@ -412,8 +433,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     
     try {
+      console.log('Form submission started...');
       const apiKey = sanitizeText(input.value);
       const provider = providerSelect.value;
+      
+      console.log('Provider selected:', provider);
+      console.log('API key length:', apiKey.length);
       
       // Validate API key
       const validation = validateApiKey(apiKey, provider);
@@ -423,14 +448,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       
+      console.log('API key validation passed');
       setFormLoadingState(true);
       
+      console.log('Saving to storage...');
       await safeStorageSet({ apiKey, aiProvider: provider });
+      console.log('Storage save successful');
+      
       showStatus(`Settings saved successfully! You can now use ${AI_PROVIDERS[provider].name} on YouTube.`, 'success');
       
     } catch (error) {
       console.error('Error saving settings:', error);
-      showStatus('Failed to save settings. Please try again.', 'error');
+      showStatus(`Failed to save settings: ${error.message}`, 'error');
     } finally {
       setFormLoadingState(false);
     }
