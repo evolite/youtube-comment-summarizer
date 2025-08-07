@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Comment Summarizer - Settings</title>
+  <style>
+    /* Firefox design system variables */
+    :root {
+      --in-content-page-color: #15141a;
+      --in-content-page-background: #ffffff;
+      --in-content-text-color: #15141a;
+      --in-content-selected-text: #ffffff;
+      --in-content-box-background: #ffffff;
+      --in-content-box-background-odd: #f9f9fb;
+      --in-content-box-border-color: #d7d7db;
+      --in-content-item-hover: rgba(69, 161, 255, 0.2);
+      --in-content-item-selected: #0a84ff;
+      --in-content-border-focus: #0a84ff;
+      --in-content-border-invalid: #d70022;
+      --in-content-error-text-color: #c50042;
+      --in-content-success-text-color: #058b00;
+      --in-content-warning-text-color: #ffa436;
+      --in-content-button-background: #f9f9fb;
+      --in-content-button-background-hover: #ededf0;
+      --in-content-button-background-active: #d7d7db;
+      --in-content-primary-button-background: #0a84ff;
+      --in-content-primary-button-background-hover: #0060df;
+      --in-content-primary-button-background-active: #003eaa;
+      --in-content-danger-button-background: #d70022;
+      --in-content-danger-button-background-hover: #b5001f;
+      --in-content-danger-button-background-active: #9f001c;
+      --firefox-border-radius: 4px;
+      --firefox-button-border-radius: 4px;
+      --firefox-input-border-radius: 4px;
+    }
+
+    /* Dark mode variables */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --in-content-page-color: #fbfbfe;
+        --in-content-page-background: #2b2a33;
+        --in-content-text-color: #fbfbfe;
+        --in-content-selected-text: #2b2a33;
+        --in-content-box-background: #38383d;
+        --in-content-box-background-odd: #323234;
+        --in-content-box-border-color: #52525e;
+        --in-content-item-hover: rgba(249, 249, 250, 0.15);
+        --in-content-border-focus: #00ddff;
+        --in-content-border-invalid: #ff9aa2;
+        --in-content-error-text-color: #ff9aa2;
+        --in-content-success-text-color: #30e60b;
+        --in-content-warning-text-color: #ffbd4f;
+        --in-content-button-background: #52525e;
+        --in-content-button-background-hover: #5b5b66;
+        --in-content-button-background-active: #42414d;
+        --in-content-primary-button-background: #0a84ff;
+        --in-content-primary-button-background-hover: #0060df;
+        --in-content-primary-button-background-active: #003eaa;
+      }
+    }
+
+    /* Base styles following Firefox design */
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Ubuntu", "Helvetica Neue", sans-serif;
+      font-size: 15px;
+      line-height: 1.4;
+      color: var(--in-content-text-color);
+      background-color: var(--in-content-page-background);
+    }
+
+    .main-content {
+      max-width: 664px;
+      margin: 0 auto;
+      padding: 40px 48px;
+      min-height: 100vh;
+    }
+
+    /* Header styling */
+    .header {
+      margin-bottom: 40px;
+      border-bottom: 1px solid var(--in-content-box-border-color);
+      padding-bottom: 20px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: 300;
+      color: var(--in-content-text-color);
+      margin: 0 0 8px 0;
+      line-height: 1.2;
+    }
+
+    .header .subtitle {
+      color: var(--in-content-text-color);
+      opacity: 0.7;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    /* Settings section */
+    .settings-section {
+      background: var(--in-content-box-background);
+      border: 1px solid var(--in-content-box-border-color);
+      border-radius: var(--firefox-border-radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .settings-section h2 {
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0 0 16px 0;
+      color: var(--in-content-text-color);
+    }
+
+    /* Form controls */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--in-content-text-color);
+      font-size: 14px;
+    }
+
+    input[type="password"], select {
+      width: 100%;
+      max-width: 400px;
+      padding: 8px 12px;
+      border: 1px solid var(--in-content-box-border-color);
+      border-radius: var(--firefox-input-border-radius);
+      background-color: var(--in-content-box-background);
+      color: var(--in-content-text-color);
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    input[type="password"]:focus, select:focus {
+      outline: none;
+      border-color: var(--in-content-border-focus);
+      box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3);
+    }
+
+    input[type="password"]:invalid, select:invalid {
+      border-color: var(--in-content-border-invalid);
+    }
+
+    input[type="password"]:disabled, select:disabled {
+      background-color: var(--in-content-box-background-odd);
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Textarea styling */
+    textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--in-content-box-border-color);
+      border-radius: var(--firefox-input-border-radius);
+      background-color: var(--in-content-box-background);
+      color: var(--in-content-text-color);
+      font-size: 14px;
+      font-family: inherit;
+      line-height: 1.4;
+      resize: vertical;
+      min-height: 120px;
+      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--in-content-border-focus);
+      box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3);
+    }
+
+    textarea:disabled {
+      background-color: var(--in-content-box-background-odd);
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Help text */
+    .help-text {
+      font-size: 13px;
+      color: var(--in-content-text-color);
+      opacity: 0.7;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .help-text a {
+      color: var(--in-content-item-selected);
+      text-decoration: none;
+    }
+
+    .help-text a:hover {
+      text-decoration: underline;
+    }
+
+    /* Buttons */
+    button {
+      padding: 8px 16px;
+      border: 1px solid transparent;
+      border-radius: var(--firefox-button-border-radius);
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      min-height: 36px;
+      min-width: 120px;
+    }
+
+    button.primary {
+      background-color: var(--in-content-primary-button-background);
+      color: var(--in-content-selected-text);
+    }
+
+    button.primary:hover:not(:disabled) {
+      background-color: var(--in-content-primary-button-background-hover);
+    }
+
+    button.primary:active:not(:disabled) {
+      background-color: var(--in-content-primary-button-background-active);
+    }
+
+    button.secondary {
+      background-color: var(--in-content-button-background);
+      color: var(--in-content-text-color);
+      border-color: var(--in-content-box-border-color);
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background-color: var(--in-content-button-background-hover);
+    }
+
+    button.secondary:active:not(:disabled) {
+      background-color: var(--in-content-button-background-active);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button:focus {
+      outline: 2px solid var(--in-content-border-focus);
+      outline-offset: 2px;
+    }
+
+    /* Status messages */
+    .status {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: var(--firefox-border-radius);
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid transparent;
+      display: none;
+    }
+
+    .status.success {
+      background-color: rgba(5, 139, 0, 0.1);
+      border-color: var(--in-content-success-text-color);
+      color: var(--in-content-success-text-color);
+    }
+
+    .status.error {
+      background-color: rgba(215, 0, 34, 0.1);
+      border-color: var(--in-content-error-text-color);
+      color: var(--in-content-error-text-color);
+    }
+
+    .status.warning {
+      background-color: rgba(255, 164, 54, 0.1);
+      border-color: var(--in-content-warning-text-color);
+      color: var(--in-content-warning-text-color);
+    }
+
+    /* Button group */
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    /* Info box */
+    .info-box {
+      background-color: rgba(10, 132, 255, 0.1);
+      border: 1px solid rgba(10, 132, 255, 0.3);
+      border-radius: var(--firefox-border-radius);
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .info-box h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--in-content-item-selected);
+    }
+
+    .info-box p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--in-content-text-color);
+      opacity: 0.9;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .main-content {
+        padding: 20px 16px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .settings-section {
+        padding: 16px;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+      input[type="password"], select {
+        border-width: 2px;
+      }
+
+      button {
+        border-width: 2px;
+      }
+
+      .status {
+        border-width: 2px;
+      }
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <header class="header">
+      <h1>YouTube Comment Summarizer</h1>
+      <p class="subtitle">Configure your AI-powered comment summarization settings</p>
+    </header>
+
+    <div class="info-box">
+      <h3>🤖 AI Provider Options</h3>
+      <p>Choose between Claude 3.5 Sonnet, OpenAI GPT-3.5 Turbo, or Google Gemini Pro to generate comment summaries. Each provider requires its own API key.</p>
+    </div>
+
+    <section class="settings-section">
+      <h2>API Configuration</h2>
+      
+      <form id="api-key-form">
+        <div class="form-group">
+          <label for="ai-provider-select">AI Provider</label>
+          <select id="ai-provider-select" required>
+            <option value="">Loading providers...</option>
+          </select>
+          <div class="help-text">
+            Choose your preferred AI provider for comment summarization.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="api-key-input">API Key</label>
+          <input 
+            type="password" 
+            id="api-key-input" 
+            placeholder="Loading..." 
+            required 
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="help-text provider-help-text">
+            Your key is stored locally and never transmitted to third parties.
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button type="submit" class="primary">Save Settings</button>
+          <button type="button" class="secondary" id="test-key-btn">Test Connection</button>
+        </div>
+      </form>
+
+      <div id="status" class="status"></div>
+    </section>
+
+    <section class="settings-section">
+      <h2>Summary Customization</h2>
+      
+      <form id="prompt-form">
+        <div class="form-group">
+          <label for="system-prompt-input">AI System Prompt</label>
+          <textarea 
+            id="system-prompt-input" 
+            rows="6"
+            placeholder="Please provide a concise, flowing summary of the key themes and overall sentiment from the following YouTube comments..."
+            spellcheck="true"
+          ></textarea>
+          <div class="help-text">
+            Customize how the AI analyzes and summarizes YouTube comments. The prompt should instruct the AI on the style, format, and focus of the summary you want.
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button type="submit" class="primary">Save Prompt</button>
+          <button type="button" class="secondary" id="reset-prompt-btn">🔄 Reset to Default</button>
+        </div>
+      </form>
+
+      <div id="prompt-status" class="status"></div>
+    </section>
+
+    <section class="settings-section">
+      <h2>Usage Information</h2>
+      <div class="form-group">
+        <label>Rate Limiting</label>
+        <div class="help-text">
+          The extension limits requests to 10 per minute per tab to prevent API abuse and reduce costs.
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Comment Processing</label>
+        <div class="help-text">
+          Up to 100 comments are processed per request, with each comment limited to 1000 characters for optimal performance.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Privacy</label>
+        <div class="help-text">
+          All comment data is sent directly to your selected AI provider's API and is not stored or processed by this extension.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Supported Providers</label>
+        <div class="help-text">
+          <strong>Claude 3.5 Sonnet:</strong> Advanced reasoning and analysis<br>
+          <strong>OpenAI GPT-3.5 Turbo:</strong> Fast and cost-effective<br>
+          <strong>Google Gemini Pro:</strong> Free tier available with Google account
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html> 
