@@ -1,4 +1,4 @@
-/* style.css - YouTube Comment Summarizer extension with YouTube-matching design */
+/* style.css - YouTube Comment Summarizer extension with modern YouTube-matching design */
 
 /* YouTube color variables */
 :root {
@@ -64,17 +64,14 @@
   }
 }
 
-/* Button container - YouTube style */
+/* Button container - Clean YouTube style */
 .yt-summarize-button-container {
   display: flex;
   gap: var(--yt-spacing-sm);
   margin: var(--yt-spacing-lg) 0;
-  padding: var(--yt-spacing-lg);
-  background: var(--yt-spec-raised-background);
-  border: 1px solid var(--yt-spec-outline);
-  border-radius: var(--yt-border-radius);
   flex-wrap: wrap;
   align-items: center;
+  /* Removed background, border, and padding for clean look */
 }
 
 /* Main summarize button - YouTube style */
@@ -155,19 +152,17 @@
   outline-offset: 2px;
 }
 
-/* Loading box - YouTube style */
+/* Loading box - Clean YouTube style */
 .yt-summarize-loading {
   margin: var(--yt-spacing-lg) 0;
   padding: var(--yt-spacing-lg);
-  background: var(--yt-spec-raised-background);
-  border: 1px solid var(--yt-spec-outline);
-  border-radius: var(--yt-border-radius);
   color: var(--yt-spec-text-primary);
   font-family: var(--yt-font-family);
   font-size: var(--yt-font-size-medium);
   display: flex;
   align-items: center;
   gap: var(--yt-spacing-sm);
+  /* Removed background and border for clean look */
 }
 
 /* Loading spinner */
@@ -188,18 +183,16 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Summary box - YouTube style */
+/* Summary box - Clean YouTube style */
 .yt-summarize-box {
   margin: var(--yt-spacing-lg) 0;
   padding: var(--yt-spacing-lg);
-  background: var(--yt-spec-raised-background);
-  border: 1px solid var(--yt-spec-outline);
-  border-radius: var(--yt-border-radius);
   color: var(--yt-spec-text-primary);
   font-family: var(--yt-font-family);
   font-size: var(--yt-font-size-medium);
   line-height: 1.5;
   white-space: pre-wrap;
+  /* Removed background and border for clean look */
 }
 
 /* Summary title */
@@ -218,8 +211,7 @@
 
 /* Error state */
 .yt-summarize-box[data-error="true"] {
-  border-color: var(--yt-spec-error);
-  background-color: rgba(204, 0, 0, 0.05);
+  color: var(--yt-spec-error);
 }
 
 .yt-summarize-box[data-error="true"] h3 {
@@ -258,11 +250,6 @@
 @media (prefers-contrast: high) {
   .yt-summarize-btn {
     border: 2px solid var(--yt-spec-call-to-action);
-  }
-  
-  .yt-summarize-box,
-  .yt-summarize-loading {
-    border-width: 2px;
   }
 }
 
