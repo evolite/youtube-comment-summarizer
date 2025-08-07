@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Comment Summarizer",
+  "version": "1.3.0",
+  "description": "Securely summarizes YouTube video comments using Claude, OpenAI, or Gemini AI with enhanced privacy and security features.",
+  "author": "Your Extension Team",
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "youtube-comment-summarizer@extension.local"
+    }
+  },
+  "permissions": [
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*.youtube.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.openai.com/*",
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "background": {
+    "scripts": ["background-refactored.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/watch*"],
+      "css": ["style.css"],
+      "js": ["content-refactored.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com; style-src 'self' 'unsafe-inline'"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "style.css",
+        "utils.js",
+        "services/*.js"
+      ],
+      "matches": ["*://*.youtube.com/*"]
+    }
+  ],
+  "minimum_chrome_version": "88",
+  "action": {
+    "default_title": "YouTube Comment Summarizer",
+    "default_icon": {
+      "48": "icons/icon-48.png",
+      "96": "icons/icon-96.png"
+    }
+  }
+} 
