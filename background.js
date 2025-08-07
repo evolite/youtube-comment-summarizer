@@ -116,97 +116,186 @@ class APIService {
     return prompt.trim();
   }
 
-  async callClaudeAPI(apiKey, prompt, controller) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 2000,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
+  async callClaudeAPI(apiKey, prompt, controller, retryCount = 0) {
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+    
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 2000,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        
+        // Handle specific error codes
+        if (response.status === 529) {
+          if (retryCount < maxRetries) {
+            const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
+            console.log(`Claude API overloaded (529), retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return this.callClaudeAPI(apiKey, prompt, controller, retryCount + 1);
+          } else {
+            throw new Error(`Claude API is currently overloaded. Please try again in a few minutes, or switch to OpenAI/Gemini in the extension options. (Status: 529)`);
           }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Claude API error: ${response.status} ${errorText}`);
-    }
-
-    const data = await response.json();
-    return data.content[0].text;
-  }
-
-  async callOpenAIAPI(apiKey, prompt, controller) {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        max_tokens: 2000,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant that summarizes YouTube comments.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
-    }
-
-    const data = await response.json();
-    return data.choices[0].message.content;
-  }
-
-  async callGeminiAPI(apiKey, prompt, controller) {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          maxOutputTokens: 2000
+        } else if (response.status === 429) {
+          throw new Error(`Claude API rate limit exceeded. Please wait before trying again. (Status: 429)`);
+        } else if (response.status === 401) {
+          throw new Error(`Invalid Claude API key. Please check your API key in the extension options. (Status: 401)`);
+        } else {
+          throw new Error(`Claude API error: ${response.status} ${errorText}`);
         }
-      })
-    });
+      }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+      const data = await response.json();
+      return data.content[0].text;
+    } catch (error) {
+      if (error.message.includes('overloaded') || error.message.includes('529')) {
+        throw new Error(`Claude API is currently overloaded. Please try again in a few minutes.`);
+      }
+      throw error;
     }
+  }
 
-    const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
+  async callOpenAIAPI(apiKey, prompt, controller, retryCount = 0) {
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+    
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          max_tokens: 2000,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant that summarizes YouTube comments.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        
+        // Handle specific error codes
+        if (response.status === 429) {
+          if (retryCount < maxRetries) {
+            const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
+            console.log(`OpenAI API rate limited (429), retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return this.callOpenAIAPI(apiKey, prompt, controller, retryCount + 1);
+          } else {
+            throw new Error(`OpenAI API rate limit exceeded. Please wait before trying again. (Status: 429)`);
+          }
+        } else if (response.status === 401) {
+          throw new Error(`Invalid OpenAI API key. Please check your API key in the extension options. (Status: 401)`);
+        } else if (response.status === 503) {
+          if (retryCount < maxRetries) {
+            const delay = baseDelay * Math.pow(2, retryCount);
+            console.log(`OpenAI API service unavailable (503), retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return this.callOpenAIAPI(apiKey, prompt, controller, retryCount + 1);
+          } else {
+            throw new Error(`OpenAI API is currently unavailable. Please try again later. (Status: 503)`);
+          }
+        } else {
+          throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+        }
+      }
+
+      const data = await response.json();
+      return data.choices[0].message.content;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async callGeminiAPI(apiKey, prompt, controller, retryCount = 0) {
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+    
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            maxOutputTokens: 2000
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        
+        // Handle specific error codes
+        if (response.status === 429) {
+          if (retryCount < maxRetries) {
+            const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
+            console.log(`Gemini API rate limited (429), retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return this.callGeminiAPI(apiKey, prompt, controller, retryCount + 1);
+          } else {
+            throw new Error(`Gemini API rate limit exceeded. Please wait before trying again. (Status: 429)`);
+          }
+        } else if (response.status === 401) {
+          throw new Error(`Invalid Gemini API key. Please check your API key in the extension options. (Status: 401)`);
+        } else if (response.status === 503) {
+          if (retryCount < maxRetries) {
+            const delay = baseDelay * Math.pow(2, retryCount);
+            console.log(`Gemini API service unavailable (503), retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return this.callGeminiAPI(apiKey, prompt, controller, retryCount + 1);
+          } else {
+            throw new Error(`Gemini API is currently unavailable. Please try again later. (Status: 503)`);
+          }
+        } else {
+          throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+        }
+      }
+
+      const data = await response.json();
+      return data.candidates[0].content.parts[0].text;
+    } catch (error) {
+      throw error;
+    }
   }
 
   async callAIProvider(provider, apiKey, prompt, controller) {
