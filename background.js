@@ -148,7 +148,6 @@ class APIService {
         if (response.status === 529) {
           if (retryCount < maxRetries) {
             const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
-            console.log(`Claude API overloaded (529), retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
             await new Promise(resolve => setTimeout(resolve, delay));
             return this.callClaudeAPI(apiKey, prompt, controller, retryCount + 1);
           } else {
@@ -207,7 +206,6 @@ class APIService {
         if (response.status === 429) {
           if (retryCount < maxRetries) {
             const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
-            console.log(`OpenAI API rate limited (429), retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
             await new Promise(resolve => setTimeout(resolve, delay));
             return this.callOpenAIAPI(apiKey, prompt, controller, retryCount + 1);
           } else {
@@ -269,7 +267,6 @@ class APIService {
         if (response.status === 429) {
           if (retryCount < maxRetries) {
             const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
-            console.log(`Gemini API rate limited (429), retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
             await new Promise(resolve => setTimeout(resolve, delay));
             return this.callGeminiAPI(apiKey, prompt, controller, retryCount + 1);
           } else {
@@ -280,7 +277,6 @@ class APIService {
         } else if (response.status === 503) {
           if (retryCount < maxRetries) {
             const delay = baseDelay * Math.pow(2, retryCount);
-            console.log(`Gemini API service unavailable (503), retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
             await new Promise(resolve => setTimeout(resolve, delay));
             return this.callGeminiAPI(apiKey, prompt, controller, retryCount + 1);
           } else {

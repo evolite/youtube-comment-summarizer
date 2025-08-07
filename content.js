@@ -21,7 +21,6 @@ class ContentScriptController {
         if (commentsSection && buttons) {
           return; // Already initialized and buttons are present
         } else {
-          console.log('Marked as initialized but buttons missing, re-initializing...');
           this.isInitialized = false;
         }
       }
@@ -30,13 +29,11 @@ class ContentScriptController {
       if (commentsSection) {
         this.injectButtons(commentsSection);
         this.isInitialized = true;
-        console.log('Content script initialized successfully');
       } else {
-        console.warn('Comments section not found, will retry later');
         this.isInitialized = false;
       }
     } catch (error) {
-      console.warn('Initialization error, will retry:', error.message);
+      console.error('Initialization error:', error.message);
       this.isInitialized = false;
     }
   }
@@ -68,7 +65,6 @@ class ContentScriptController {
     // Remove existing buttons if any
     const existingButtons = commentsSection.querySelector('.yt-summarize-button-container');
     if (existingButtons) {
-      console.log('Removing existing buttons for re-initialization');
       existingButtons.remove();
     }
 
@@ -97,7 +93,6 @@ class ContentScriptController {
 
     // Insert at the top of comments section
     commentsSection.insertBefore(buttonContainer, commentsSection.firstChild);
-    console.log('Buttons injected successfully');
   }
 
   /**
@@ -501,8 +496,6 @@ class ContentScriptController {
    * Removes summary box
    */
   removeSummaryBox() {
-    console.log('Removing summary elements...');
-    
     const elements = [
       'yt-summarize-summary',
       'yt-summarize-loading',
@@ -512,7 +505,6 @@ class ContentScriptController {
     elements.forEach(id => {
       const element = document.getElementById(id);
       if (element) {
-        console.log(`Removing element with id: ${id}`);
         element.remove();
       }
     });
@@ -520,7 +512,6 @@ class ContentScriptController {
     // Also remove any orphaned elements with our classes (but NOT buttons)
     const orphanedElements = document.querySelectorAll('.yt-summarize-box, .yt-summarize-loading');
     orphanedElements.forEach(element => {
-      console.log(`Removing orphaned element:`, element.className);
       element.remove();
     });
     
@@ -528,7 +519,6 @@ class ContentScriptController {
     const dataElements = document.querySelectorAll('[data-error="true"]');
     dataElements.forEach(element => {
       if (element.classList.contains('yt-summarize-box')) {
-        console.log('Removing error element');
         element.remove();
       }
     });
@@ -538,7 +528,6 @@ class ContentScriptController {
    * Handles navigation
    */
   handleNavigation() {
-    console.log('Navigation detected, resetting extension...');
     this.isInitialized = false;
     this.removeSummaryBox();
     
@@ -548,7 +537,6 @@ class ContentScriptController {
     
     // Re-initialize after a short delay
     setTimeout(() => {
-      console.log('Re-initializing after navigation...');
       this.initialize();
     }, 500);
     
@@ -557,7 +545,6 @@ class ContentScriptController {
       const commentsSection = document.querySelector('#comments');
       const buttons = commentsSection?.querySelector('.yt-summarize-button-container');
       if (commentsSection && !buttons) {
-        console.log('Navigation safety check: Buttons still missing, forcing re-initialization...');
         this.forceReinitialize();
       }
     }, 2000);
@@ -569,7 +556,6 @@ class ContentScriptController {
   ensureButtonsPresent() {
     const commentsSection = document.querySelector('#comments');
     if (commentsSection && !commentsSection.querySelector('.yt-summarize-button-container')) {
-      console.log('Buttons missing, re-injecting...');
       this.injectButtons(commentsSection);
       this.isInitialized = true;
     }
@@ -579,7 +565,6 @@ class ContentScriptController {
    * Force re-initialization if needed
    */
   forceReinitialize() {
-    console.log('Force re-initializing extension...');
     this.isInitialized = false;
     this.initialize();
   }
@@ -724,24 +709,18 @@ async function initializeWithRetry() {
       const commentsSection = document.querySelector('#comments');
       const buttons = commentsSection?.querySelector('.yt-summarize-button-container');
       if (commentsSection && buttons) {
-        console.log('Initialization successful with buttons present');
         break; // Success, exit loop
       } else {
-        console.log('Initialization completed but buttons not found, retrying...');
         controller.isInitialized = false;
       }
     } catch (error) {
-      console.warn(`Initialization attempt ${attempts + 1} failed:`, error.message);
+      console.error(`Initialization attempt ${attempts + 1} failed:`, error.message);
     }
     attempts++;
     if (attempts < maxAttempts) {
       // Wait before retry
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
-  }
-  
-  if (attempts >= maxAttempts) {
-    console.warn('Failed to initialize after all attempts, will retry via periodic check');
   }
 }
 
@@ -760,7 +739,6 @@ if (window.location.pathname === '/watch') {
       const buttons = commentsSection?.querySelector('.yt-summarize-button-container');
       
       if (commentsSection && !buttons) {
-        console.log('Periodic check: Buttons missing, re-initializing...');
         controller.forceReinitialize();
       }
     }
