@@ -47,7 +47,7 @@ const AI_PROVIDERS = {
 };
 
 // Default system prompt
-const DEFAULT_SYSTEM_PROMPT = 'Please provide a concise, flowing summary of the key themes and overall sentiment from the following YouTube comments. Write in a natural, readable paragraph format without bullet points or numbered lists. Focus on the main themes and overall sentiment:\n\n';
+const DEFAULT_SYSTEM_PROMPT = 'Please provide a concise, flowing summary of the key themes and overall sentiment from the following YouTube comments (including replies). Write in a natural, readable paragraph format without bullet points or numbered lists. Focus on the main themes and overall sentiment:\n\n';
 
 // Initialize cleanup interval for rate limiting
 function initializeRateLimitCleanup() {

@@ -11,14 +11,43 @@ const CONFIG = {
   maxCleanupItems: 100 // Prevent memory leaks
 };
 
-// Enhanced comment selectors with fallbacks
+// Enhanced comment selectors with fallbacks - now includes replies
 const COMMENT_SELECTORS = [
+  // Main comments
   'ytd-comment-thread-renderer #content-text',
   '.comment-text',
   '[data-comment-text]',
   'ytd-comment-thread-renderer .style-scope.ytd-comment-renderer',
   '#content-text',
-  'yt-formatted-string[slot="content"]'
+  'yt-formatted-string[slot="content"]',
+  // Reply comments
+  'ytd-comment-renderer ytd-comment-renderer #content-text',
+  'ytd-comment-renderer ytd-comment-renderer .comment-text',
+  'ytd-comment-renderer ytd-comment-renderer [data-comment-text]',
+  'ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]',
+  // Nested replies (replies to replies)
+  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer #content-text',
+  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer .comment-text',
+  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer [data-comment-text]',
+  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]'
+];
+
+// Reply-specific selectors for better targeting
+const REPLY_SELECTORS = [
+  'ytd-comment-renderer ytd-comment-renderer #content-text',
+  'ytd-comment-renderer ytd-comment-renderer .comment-text',
+  'ytd-comment-renderer ytd-comment-renderer [data-comment-text]',
+  'ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]',
+  // Deep nested replies
+  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer #content-text',
+  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer .comment-text',
+  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer [data-comment-text]',
+  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]',
+  // Additional reply patterns
+  '.ytd-comment-renderer .ytd-comment-renderer #content-text',
+  '.ytd-comment-renderer .ytd-comment-renderer .comment-text',
+  '.ytd-comment-renderer .ytd-comment-renderer [data-comment-text]',
+  '.ytd-comment-renderer .ytd-comment-renderer yt-formatted-string[slot="content"]'
 ];
 
 // Global cleanup registry with size limits
@@ -220,6 +249,9 @@ function findComments() {
   const comments = [];
   const seenTexts = new Set(); // Prevent duplicates
   
+  // First, try to expand reply threads to capture more replies
+  expandReplyThreads();
+  
   for (const selector of COMMENT_SELECTORS) {
     try {
       const elements = document.querySelectorAll(selector);
@@ -247,7 +279,37 @@ function findComments() {
     }
   }
   
+  console.log(`Found ${comments.length} comments (including replies)`);
   return comments;
+}
+
+function expandReplyThreads() {
+  try {
+    // Look for "View replies" buttons and click them
+    const viewRepliesButtons = document.querySelectorAll('[aria-label*="View replies"], [aria-label*="Show replies"], [aria-label*="Replies"]');
+    
+    viewRepliesButtons.forEach(button => {
+      if (button && button.offsetParent !== null && !button.disabled) {
+        console.log('Expanding reply thread');
+        button.click();
+      }
+    });
+    
+    // Also look for "Show more replies" buttons
+    const showMoreRepliesButtons = document.querySelectorAll('[aria-label*="Show more replies"], [aria-label*="Load more replies"]');
+    
+    showMoreRepliesButtons.forEach(button => {
+      if (button && button.offsetParent !== null && !button.disabled) {
+        console.log('Loading more replies');
+        button.click();
+      }
+    });
+    
+    // Wait a bit for replies to load
+    return new Promise(resolve => setTimeout(resolve, 1000));
+  } catch (error) {
+    console.warn('Error expanding reply threads:', error);
+  }
 }
 
 async function loadAllCommentsWithScrolling() {
@@ -281,6 +343,9 @@ async function loadAllCommentsWithScrolling() {
       // Wait for new comments to load
       await new Promise(resolve => setTimeout(resolve, scrollDelay));
       
+      // Expand reply threads to capture more replies
+      await expandReplyThreads();
+      
       // Look for "Load more" button and click it
       const loadMoreButton = document.querySelector('ytd-continuation-item-renderer button') ||
                            document.querySelector('[aria-label*="Show more"]') ||
@@ -290,6 +355,9 @@ async function loadAllCommentsWithScrolling() {
         console.log(`Clicking load more button (attempt ${i + 1})`);
         loadMoreButton.click();
         await new Promise(resolve => setTimeout(resolve, scrollDelay));
+        
+        // Expand reply threads again after loading more comments
+        await expandReplyThreads();
       }
       
       // Get updated comment count
@@ -315,13 +383,12 @@ async function loadAllCommentsWithScrolling() {
       behavior: 'smooth'
     });
     
-    console.log(`Final deep load result: ${comments.length} comments`);
+    console.log(`Final comment count: ${comments.length} (including replies)`);
     return comments.slice(0, 200); // Limit to prevent API overload
     
   } catch (error) {
-    console.error('Error in deep comment loading:', error);
-    // Fallback to regular comment loading
-    return findComments().slice(0, 100);
+    console.error('Error loading comments with scrolling:', error);
+    throw new Error('Failed to load comments with scrolling: ' + error.message);
   }
 }
 
