@@ -227,10 +227,10 @@ class ContentScriptController {
     const originalScrollTop = window.scrollY;
     const comments = [];
     let attempts = 0;
-    const maxAttempts = 8; // Increased attempts for better coverage
+    const maxAttempts = 10; // More attempts for better coverage
     
     try {
-      console.log('Starting deep comment loading...');
+      console.log('Starting deep comment loading with scrolling...');
       
       while (attempts < maxAttempts) {
         // Get current visible comments
@@ -239,36 +239,34 @@ class ContentScriptController {
         
         console.log(`Attempt ${attempts + 1}: Found ${currentComments.length} comments (total: ${comments.length})`);
         
-        // Try to find and click "Load more" buttons in comments section
-        const loadMoreButton = this.findLoadMoreButton();
+        // Simple scrolling approach - just scroll down
+        const currentHeight = document.body.scrollHeight;
+        const currentScrollY = window.scrollY;
+        const viewportHeight = window.innerHeight;
         
-        if (loadMoreButton) {
-          console.log('Found load more button, clicking...');
-          loadMoreButton.click();
-          await new Promise(resolve => setTimeout(resolve, 2500)); // Wait for content to load
-        } else {
-          console.log('No load more button found, scrolling down...');
-          // Scroll down to load more comments
-          const currentHeight = document.body.scrollHeight;
-          const scrollTarget = Math.min(currentHeight, window.scrollY + 1000); // Scroll 1000px down
-          window.scrollTo(0, scrollTarget);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          // Check if new content was loaded
-          const newHeight = document.body.scrollHeight;
-          if (newHeight === currentHeight && window.scrollY >= currentHeight - 100) {
-            console.log('Reached bottom of page, stopping...');
-            break;
-          }
+        // Scroll down by viewport height
+        const scrollTarget = Math.min(currentHeight, currentScrollY + viewportHeight);
+        window.scrollTo(0, scrollTarget);
+        
+        // Wait for content to load
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Check if we've reached the bottom
+        const newHeight = document.body.scrollHeight;
+        const newScrollY = window.scrollY;
+        
+        if (newHeight === currentHeight && newScrollY >= currentHeight - viewportHeight) {
+          console.log('Reached bottom of page, stopping...');
+          break;
         }
         
-        attempts++;
-        
         // If we've found a good number of comments, we can stop early
-        if (comments.length > 100) {
+        if (comments.length > 150) {
           console.log('Found sufficient comments, stopping early...');
           break;
         }
+        
+        attempts++;
       }
     } finally {
       // Restore scroll position
@@ -279,52 +277,6 @@ class ContentScriptController {
     const uniqueComments = [...new Set(comments)];
     console.log(`Found ${uniqueComments.length} unique comments with deep loading`);
     return uniqueComments;
-  }
-
-  /**
-   * Finds the "Load more" button in the comments section
-   */
-  findLoadMoreButton() {
-    const loadMoreSelectors = [
-      // YouTube's comment section load more buttons
-      'ytd-continuation-item-renderer ytd-button-renderer',
-      'ytd-continuation-item-renderer button',
-      'ytd-comments ytd-button-renderer[aria-label*="Load more"]',
-      'ytd-comments ytd-button-renderer[aria-label*="Show more"]',
-      'ytd-comments button[aria-label*="Load more"]',
-      'ytd-comments button[aria-label*="Show more"]',
-      // Generic load more buttons
-      'ytd-button-renderer[aria-label*="Load more"]',
-      'ytd-button-renderer[aria-label*="Show more"]',
-      'button[aria-label*="Load more"]',
-      'button[aria-label*="Show more"]',
-      // More specific selectors
-      '#comments ytd-button-renderer[aria-label*="Load more"]',
-      '#comments ytd-button-renderer[aria-label*="Show more"]',
-      '#comments button[aria-label*="Load more"]',
-      '#comments button[aria-label*="Show more"]'
-    ];
-    
-    for (const selector of loadMoreSelectors) {
-      const buttons = document.querySelectorAll(selector);
-      for (const button of buttons) {
-        // Check if button is visible and clickable
-        if (button.offsetParent !== null && 
-            !button.disabled && 
-            button.style.display !== 'none' &&
-            button.style.visibility !== 'hidden') {
-          
-          const ariaLabel = button.getAttribute('aria-label') || '';
-          if (ariaLabel.toLowerCase().includes('load more') || 
-              ariaLabel.toLowerCase().includes('show more')) {
-            console.log(`Found load more button: ${ariaLabel}`);
-            return button;
-          }
-        }
-      }
-    }
-    
-    return null;
   }
 
   /**
