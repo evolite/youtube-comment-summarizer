@@ -64,12 +64,17 @@
   }
 }
 
-/* Button container */
+/* Button container - YouTube style */
 .yt-summarize-button-container {
   display: flex;
   gap: var(--yt-spacing-sm);
-  margin: var(--yt-spacing-sm) 0;
+  margin: var(--yt-spacing-lg) 0;
+  padding: var(--yt-spacing-lg);
+  background: var(--yt-spec-raised-background);
+  border: 1px solid var(--yt-spec-outline);
+  border-radius: var(--yt-border-radius);
   flex-wrap: wrap;
+  align-items: center;
 }
 
 /* Main summarize button - YouTube style */
@@ -99,252 +104,217 @@
   margin: 0;
 }
 
-/* Secondary button style for Deep Summarize */
+/* Secondary button - YouTube style */
 .yt-summarize-btn-secondary {
-  background-color: var(--yt-spec-suggested-action);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 var(--yt-spacing-lg);
+  font-family: var(--yt-font-family);
+  font-size: var(--yt-font-size-medium);
+  font-weight: var(--yt-font-weight-medium);
+  line-height: 36px;
+  letter-spacing: 0.007px;
+  text-transform: none;
   color: var(--yt-spec-text-primary);
-  border: 1px solid var(--yt-spec-outline);
-}
-
-.yt-summarize-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: transparent;
-  transition: background-color 0.1s cubic-bezier(0.05, 0, 0, 1);
-  pointer-events: none;
-}
-
-.yt-summarize-btn:hover:not(:disabled)::before {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.yt-summarize-btn:active:not(:disabled)::before {
-  background-color: rgba(0, 0, 0, 0.2);
-}
-
-.yt-summarize-btn:disabled {
-  color: var(--yt-spec-text-disabled);
   background-color: var(--yt-spec-suggested-action);
-  cursor: not-allowed;
+  border: 1px solid var(--yt-spec-outline);
+  border-radius: var(--yt-button-border-radius);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  word-break: break-word;
+  transition: background-color 0.1s cubic-bezier(0.05, 0, 0, 1);
+  position: relative;
+  overflow: hidden;
+  margin: 0;
 }
 
-.yt-summarize-btn:focus {
-  outline: 2px solid var(--yt-spec-call-to-action);
-  outline-offset: 2px;
+/* Button hover effects */
+.yt-summarize-btn:hover:not(:disabled) {
+  background-color: #0356c2;
 }
 
-/* Secondary button hover states */
 .yt-summarize-btn-secondary:hover:not(:disabled) {
   background-color: var(--yt-spec-button-chip-background-hover);
 }
 
+/* Button disabled state */
+.yt-summarize-btn:disabled,
 .yt-summarize-btn-secondary:disabled {
-  background-color: var(--yt-spec-suggested-action);
   opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
-/* Loading box - YouTube notification style */
+/* Button focus state */
+.yt-summarize-btn:focus,
+.yt-summarize-btn-secondary:focus {
+  outline: 2px solid var(--yt-spec-call-to-action);
+  outline-offset: 2px;
+}
+
+/* Loading box - YouTube style */
 .yt-summarize-loading {
-  display: flex;
-  align-items: center;
+  margin: var(--yt-spacing-lg) 0;
   padding: var(--yt-spacing-lg);
-  margin: var(--yt-spacing-sm) 0 var(--yt-spacing-lg) 0;
-  background-color: var(--yt-spec-raised-background);
+  background: var(--yt-spec-raised-background);
   border: 1px solid var(--yt-spec-outline);
   border-radius: var(--yt-border-radius);
+  color: var(--yt-spec-text-primary);
   font-family: var(--yt-font-family);
   font-size: var(--yt-font-size-medium);
-  font-weight: var(--yt-font-weight-normal);
-  color: var(--yt-spec-text-primary);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  position: relative;
-}
-
-.yt-summarize-loading::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background-color: var(--yt-spec-warning);
-  border-radius: 2px 0 0 2px;
+  display: flex;
+  align-items: center;
+  gap: var(--yt-spacing-sm);
 }
 
 /* Loading spinner */
-.yt-summarize-spinner {
-  width: 20px;
-  height: 20px;
-  margin-left: var(--yt-spacing-sm);
+.yt-summarize-loading::before {
+  content: '';
+  width: 16px;
+  height: 16px;
   border: 2px solid var(--yt-spec-outline);
   border-top: 2px solid var(--yt-spec-call-to-action);
   border-radius: 50%;
   animation: yt-spin 1s linear infinite;
+  flex-shrink: 0;
 }
 
+/* Spinner animation */
 @keyframes yt-spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-/* Summary box - YouTube card style */
+/* Summary box - YouTube style */
 .yt-summarize-box {
+  margin: var(--yt-spacing-lg) 0;
   padding: var(--yt-spacing-lg);
-  margin: var(--yt-spacing-sm) 0 var(--yt-spacing-lg) 0;
-  background-color: var(--yt-spec-raised-background);
+  background: var(--yt-spec-raised-background);
   border: 1px solid var(--yt-spec-outline);
   border-radius: var(--yt-border-radius);
-  font-family: var(--yt-font-family);
   color: var(--yt-spec-text-primary);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.yt-summarize-box::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background-color: var(--yt-spec-call-to-action);
-  border-radius: 2px 0 0 2px;
+  font-family: var(--yt-font-family);
+  font-size: var(--yt-font-size-medium);
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 /* Summary title */
-.yt-summarize-title {
-  display: flex;
-  align-items: center;
-  margin-bottom: var(--yt-spacing-md);
+.yt-summarize-box h3 {
+  margin: 0 0 var(--yt-spacing-sm) 0;
   font-size: var(--yt-font-size-large);
   font-weight: var(--yt-font-weight-medium);
   color: var(--yt-spec-text-primary);
-  line-height: 1.3;
-}
-
-.yt-summarize-title::before {
-  content: '💬';
-  margin-right: var(--yt-spacing-sm);
-  font-size: 18px;
 }
 
 /* Summary content */
-.yt-summarize-content {
-  font-size: var(--yt-font-size-medium);
-  font-weight: var(--yt-font-weight-normal);
-  line-height: 1.4;
-  color: var(--yt-spec-text-primary);
-  word-wrap: break-word;
+.yt-summarize-box div {
   margin: 0;
+  color: var(--yt-spec-text-secondary);
 }
 
-/* Error state styling */
+/* Error state */
 .yt-summarize-box[data-error="true"] {
   border-color: var(--yt-spec-error);
+  background-color: rgba(204, 0, 0, 0.05);
 }
 
-.yt-summarize-box[data-error="true"]::before {
-  background-color: var(--yt-spec-error);
-}
-
-.yt-summarize-box[data-error="true"] .yt-summarize-title::before {
-  content: '⚠️';
-}
-
-.yt-summarize-box[data-error="true"] .yt-summarize-content {
+.yt-summarize-box[data-error="true"] h3 {
   color: var(--yt-spec-error);
 }
 
-/* Responsive design for mobile YouTube */
+/* Responsive design */
 @media (max-width: 768px) {
   .yt-summarize-button-container {
     flex-direction: column;
-    gap: var(--yt-spacing-xs);
+    gap: var(--yt-spacing-sm);
   }
-
-  .yt-summarize-btn {
-    min-height: 32px;
-    line-height: 32px;
-    padding: 0 var(--yt-spacing-md);
-    font-size: var(--yt-font-size-small);
+  
+  .yt-summarize-btn,
+  .yt-summarize-btn-secondary {
     width: 100%;
+    justify-content: center;
   }
-
+  
   .yt-summarize-box,
   .yt-summarize-loading {
-    margin: var(--yt-spacing-xs) 0 var(--yt-spacing-md) 0;
-    padding: var(--yt-spacing-md);
-    font-size: var(--yt-font-size-small);
+    margin: var(--yt-spacing-sm) 0;
+    padding: var(--yt-spacing-sm);
   }
-
-  .yt-summarize-title {
+  
+  .yt-summarize-box h3 {
     font-size: var(--yt-font-size-medium);
-    margin-bottom: var(--yt-spacing-sm);
   }
-
-  .yt-summarize-content {
+  
+  .yt-summarize-box div {
     font-size: var(--yt-font-size-small);
   }
 }
 
-/* High contrast mode support */
+/* High contrast mode */
 @media (prefers-contrast: high) {
   .yt-summarize-btn {
-    border: 2px solid var(--yt-spec-text-primary);
+    border: 2px solid var(--yt-spec-call-to-action);
   }
-
+  
   .yt-summarize-box,
   .yt-summarize-loading {
     border-width: 2px;
   }
 }
 
-/* Reduced motion support */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .yt-summarize-btn,
-  .yt-summarize-spinner {
+  .yt-summarize-btn-secondary {
     transition: none;
+  }
+  
+  .yt-summarize-loading::before {
     animation: none;
   }
 }
 
-/* YouTube Theater Mode adjustments */
+/* Large screens */
 @media (min-width: 1294px) {
   .yt-summarize-btn {
-    margin: var(--yt-spacing-md) 0;
+    min-height: 40px;
+    padding: 0 var(--yt-spacing-xl);
   }
-
+  
   .yt-summarize-box,
   .yt-summarize-loading {
-    margin: var(--yt-spacing-md) 0 var(--yt-spacing-xl) 0;
+    max-width: 800px;
   }
 }
 
-/* Integration with YouTube's comment section */
+/* Specific YouTube contexts */
 #comments .yt-summarize-btn {
-  margin-top: var(--yt-spacing-lg);
-  margin-bottom: var(--yt-spacing-md);
+  margin-right: var(--yt-spacing-sm);
 }
 
-/* YouTube Shorts compatibility */
-ytd-shorts .yt-summarize-btn {
-  min-height: 28px;
-  line-height: 28px;
-  padding: 0 var(--yt-spacing-sm);
+/* Temporary loading message */
+#yt-summarize-temp-loading {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: var(--yt-spacing-sm) var(--yt-spacing-md);
+  background: var(--yt-spec-call-to-action);
+  color: var(--yt-spec-brand-button-text);
+  border-radius: var(--yt-border-radius);
+  font-family: var(--yt-font-family);
   font-size: var(--yt-font-size-small);
-  border-radius: 14px;
+  font-weight: var(--yt-font-weight-medium);
+  z-index: 9999;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Hover states for better YouTube integration */
-.yt-summarize-btn:hover:not(:disabled) {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.yt-summarize-box:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+/* Dark theme adjustments for temporary loading */
+@media (prefers-color-scheme: dark) {
+  #yt-summarize-temp-loading {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
 } 

@@ -60,15 +60,6 @@ class ContentScriptController {
     // Create button container
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'yt-summarize-button-container';
-    buttonContainer.style.cssText = `
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-      padding: 12px;
-      background: var(--yt-spec-brand-background-primary);
-      border-radius: 8px;
-      border: 1px solid var(--yt-spec-10-percent-layer);
-    `;
 
     // Create summarize button
     const summarizeBtn = this.createButton(
@@ -101,17 +92,6 @@ class ContentScriptController {
     button.className = className;
     button.textContent = text;
     button.setAttribute('aria-label', ariaLabel);
-    button.style.cssText = `
-      padding: 8px 16px;
-      border: none;
-      border-radius: 18px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      background: var(--yt-spec-call-to-action);
-      color: white;
-    `;
 
     button.addEventListener('click', (e) => {
       e.preventDefault();
@@ -310,15 +290,6 @@ class ContentScriptController {
     const loadingBox = document.createElement('div');
     loadingBox.id = 'yt-summarize-loading';
     loadingBox.className = 'yt-summarize-loading';
-    loadingBox.style.cssText = `
-      margin: 16px 0;
-      padding: 16px;
-      background: var(--yt-spec-brand-background-primary);
-      border-radius: 8px;
-      border: 1px solid var(--yt-spec-10-percent-layer);
-      color: var(--yt-spec-text-primary);
-      font-size: 14px;
-    `;
     loadingBox.textContent = `Generating summary based on ${commentCount} comments...`;
     
     const commentsSection = document.querySelector('#comments');
@@ -336,25 +307,11 @@ class ContentScriptController {
     const summaryBox = document.createElement('div');
     summaryBox.id = 'yt-summarize-summary';
     summaryBox.className = 'yt-summarize-box';
-    summaryBox.style.cssText = `
-      margin: 16px 0;
-      padding: 16px;
-      background: ${isError ? 'var(--yt-spec-badge-chip-background)' : 'var(--yt-spec-brand-background-primary)'};
-      border-radius: 8px;
-      border: 1px solid var(--yt-spec-10-percent-layer);
-      color: var(--yt-spec-text-primary);
-      font-size: 14px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-    `;
+    if (isError) {
+      summaryBox.setAttribute('data-error', 'true');
+    }
     
     const title = document.createElement('h3');
-    title.style.cssText = `
-      margin: 0 0 12px 0;
-      font-size: 16px;
-      font-weight: 500;
-      color: ${isError ? 'var(--yt-spec-text-negative)' : 'var(--yt-spec-text-primary)'};
-    `;
     title.textContent = isError ? 'Error' : `Summary (${commentCount} comments)`;
     
     const content = document.createElement('div');
@@ -375,17 +332,6 @@ class ContentScriptController {
   showTemporaryLoading() {
     const tempLoading = document.createElement('div');
     tempLoading.id = 'yt-summarize-temp-loading';
-    tempLoading.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 16px;
-      background: var(--yt-spec-call-to-action);
-      color: white;
-      border-radius: 8px;
-      font-size: 14px;
-      z-index: 9999;
-    `;
     tempLoading.textContent = 'Loading more comments...';
     document.body.appendChild(tempLoading);
   }
