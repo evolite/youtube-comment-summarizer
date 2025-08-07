@@ -326,64 +326,23 @@ async function loadAllCommentsWithScrolling() {
 }
 
 async function loadAllCommentsWithoutScrolling() {
-  console.log('Loading all comments with minimal interference...');
+  console.log('Loading visible comments without scrolling or clicking...');
   
   try {
-    // Get comments from the DOM without scrolling
-    let comments = findComments();
-    console.log(`Found ${comments.length} comments from DOM`);
+    // Get only the comments that are already visible in the DOM
+    const comments = findComments();
+    console.log(`Found ${comments.length} visible comments`);
     
-    // If we have a reasonable number of comments, use them
-    if (comments.length >= 10) {
-      console.log(`Using ${comments.length} comments from DOM`);
-      return comments.slice(0, 100); // Limit to prevent API overload
+    if (comments.length === 0) {
+      throw new Error('No visible comments found');
     }
     
-    // If we have very few comments, try to load more by clicking "Load more" buttons
-    console.log('Few comments found, trying to load more...');
-    
-    const loadMoreButtons = document.querySelectorAll(
-      'ytd-button-renderer[is-secondary] button, [aria-label*="Load more"], [aria-label*="Show more"], #more-replies'
-    );
-    console.log(`Found ${loadMoreButtons.length} load more buttons`);
-    
-    let attempts = 0;
-    const maxAttempts = Math.min(CONFIG.loadMoreAttempts, loadMoreButtons.length);
-    
-    while (attempts < maxAttempts) {
-      const button = loadMoreButtons[attempts];
-      if (!button || !button.isConnected) break;
-      
-      console.log('Clicking load more button...');
-      try {
-        // Check if button is still clickable
-        if (!button.disabled && button.offsetParent !== null) {
-          button.click();
-          
-          // Wait for new comments to load
-          await new Promise(resolve => setTimeout(resolve, CONFIG.loadMoreDelay));
-          
-          // Get updated comment count
-          const newComments = findComments();
-          console.log(`After attempt ${attempts + 1}: ${newComments.length} comments`);
-          
-          if (newComments.length > comments.length) {
-            comments = newComments;
-          }
-        }
-      } catch (error) {
-        console.warn('Error clicking load more button:', error);
-      }
-      
-      attempts++;
-    }
-    
-    console.log(`Final comment count: ${comments.length}`);
+    console.log(`Using ${comments.length} visible comments for quick analysis`);
     return comments.slice(0, 100); // Limit to prevent API overload
     
   } catch (error) {
-    console.error('Error loading comments:', error);
-    throw new Error('Failed to load comments: ' + error.message);
+    console.error('Error loading visible comments:', error);
+    throw new Error('Failed to load visible comments: ' + error.message);
   }
 }
 
