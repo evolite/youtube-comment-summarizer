@@ -227,10 +227,21 @@ class ContentScriptController {
     const originalScrollTop = window.scrollY;
     const comments = [];
     let attempts = 0;
-    const maxAttempts = 10; // More attempts for better coverage
+    const maxAttempts = 20; // More attempts for better coverage
     
     try {
       console.log('Starting deep comment loading with scrolling...');
+      
+      // First, scroll to the comments section
+      const commentsSection = document.querySelector('#comments');
+      if (commentsSection) {
+        console.log('Scrolling to comments section...');
+        commentsSection.scrollIntoView({ behavior: 'smooth' });
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      
+      let lastCommentCount = 0;
+      let noProgressCount = 0;
       
       while (attempts < maxAttempts) {
         // Get current visible comments
@@ -239,29 +250,65 @@ class ContentScriptController {
         
         console.log(`Attempt ${attempts + 1}: Found ${currentComments.length} comments (total: ${comments.length})`);
         
-        // Simple scrolling approach - just scroll down
-        const currentHeight = document.body.scrollHeight;
+        // Check if we're making progress
+        if (comments.length === lastCommentCount) {
+          noProgressCount++;
+          console.log(`No progress for ${noProgressCount} attempts`);
+          if (noProgressCount >= 3) {
+            console.log('No progress for 3 attempts, stopping...');
+            break;
+          }
+        } else {
+          noProgressCount = 0;
+        }
+        lastCommentCount = comments.length;
+        
+        // Try different scrolling strategies
         const currentScrollY = window.scrollY;
         const viewportHeight = window.innerHeight;
+        const documentHeight = document.body.scrollHeight;
         
-        // Scroll down by viewport height
-        const scrollTarget = Math.min(currentHeight, currentScrollY + viewportHeight);
+        // Strategy 1: Scroll down by viewport height
+        let scrollTarget = Math.min(documentHeight, currentScrollY + viewportHeight);
         window.scrollTo(0, scrollTarget);
         
+        console.log(`Scrolled from ${currentScrollY} to ${scrollTarget}`);
+        
         // Wait for content to load
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Strategy 2: Try scrolling to bottom to trigger infinite scroll
+        if (attempts % 3 === 0) {
+          console.log('Trying to scroll to bottom to trigger infinite scroll...');
+          window.scrollTo(0, documentHeight);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        
+        // Strategy 3: Try scrolling within comments section
+        const commentsSection = document.querySelector('#comments');
+        if (commentsSection && attempts % 2 === 0) {
+          console.log('Trying to scroll within comments section...');
+          const commentRect = commentsSection.getBoundingClientRect();
+          if (commentRect.bottom < window.innerHeight) {
+            // Comments section is visible, scroll down more
+            window.scrollBy(0, viewportHeight);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          }
+        }
         
         // Check if we've reached the bottom
         const newHeight = document.body.scrollHeight;
         const newScrollY = window.scrollY;
         
-        if (newHeight === currentHeight && newScrollY >= currentHeight - viewportHeight) {
+        console.log(`New height: ${newHeight}, New scroll Y: ${newScrollY}`);
+        
+        if (newHeight === documentHeight && newScrollY >= documentHeight - viewportHeight) {
           console.log('Reached bottom of page, stopping...');
           break;
         }
         
         // If we've found a good number of comments, we can stop early
-        if (comments.length > 150) {
+        if (comments.length > 300) {
           console.log('Found sufficient comments, stopping early...');
           break;
         }
