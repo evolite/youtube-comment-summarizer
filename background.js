@@ -1,7 +1,4 @@
-// background.js - Refactored background script using service classes
-
-import { APIService } from './services/APIService.js';
-import { Logger, CONSTANTS } from './utils.js';
+// background.js - Background script for YouTube Comment Summarizer
 
 /**
  * Rate limiting manager
@@ -9,56 +6,40 @@ import { Logger, CONSTANTS } from './utils.js';
 class RateLimitManager {
   constructor() {
     this.requests = new Map();
-    this.cleanupInterval = null;
     this.initializeCleanup();
   }
 
-  /**
-   * Initializes cleanup interval for rate limiting
-   */
   initializeCleanup() {
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
-    }
-    
-    this.cleanupInterval = setInterval(() => {
-      const now = Date.now();
-      for (const [tabId, requests] of this.requests.entries()) {
-        const recentRequests = requests.filter(time => now - time < CONSTANTS.API.RATE_LIMIT_WINDOW);
-        if (recentRequests.length === 0) {
-          this.requests.delete(tabId);
-        } else {
-          this.requests.set(tabId, recentRequests);
-        }
-      }
-    }, CONSTANTS.API.RATE_LIMIT_WINDOW);
+    // Clean up old requests every minute
+    setInterval(() => this.cleanup(), 60000);
   }
 
-  /**
-   * Checks if a tab has exceeded rate limits
-   * @param {string} tabId - Tab ID to check
-   * @throws {Error} If rate limit exceeded
-   */
   checkRateLimit(tabId) {
     const now = Date.now();
-    const recentRequests = this.requests.get(tabId) || [];
-    const validRequests = recentRequests.filter(time => now - time < CONSTANTS.API.RATE_LIMIT_WINDOW);
+    const tabRequests = this.requests.get(tabId) || [];
     
-    if (validRequests.length >= CONSTANTS.API.MAX_REQUESTS_PER_WINDOW) {
-      throw new Error(`Rate limit exceeded: maximum ${CONSTANTS.API.MAX_REQUESTS_PER_WINDOW} requests per minute`);
+    // Remove requests older than 1 minute
+    const recentRequests = tabRequests.filter(time => now - time < 60000);
+    
+    if (recentRequests.length >= 10) {
+      return false; // Rate limited
     }
     
-    validRequests.push(now);
-    this.requests.set(tabId, validRequests);
+    // Add current request
+    recentRequests.push(now);
+    this.requests.set(tabId, recentRequests);
+    return true;
   }
 
-  /**
-   * Performs cleanup
-   */
   cleanup() {
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
-      this.cleanupInterval = null;
+    const now = Date.now();
+    for (const [tabId, requests] of this.requests.entries()) {
+      const recentRequests = requests.filter(time => now - time < 60000);
+      if (recentRequests.length === 0) {
+        this.requests.delete(tabId);
+      } else {
+        this.requests.set(tabId, recentRequests);
+      }
     }
   }
 }
@@ -67,36 +48,226 @@ class RateLimitManager {
  * Storage manager for handling browser storage operations
  */
 class StorageManager {
-  /**
-   * Gets data from storage with timeout
-   * @param {string[]} keys - Keys to retrieve
-   * @returns {Promise<Object>} Storage data
-   */
   async get(keys) {
-    const storagePromise = browser.storage.local.get(keys);
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Storage timeout')), 5000)
-    );
-    
-    return await Promise.race([storagePromise, timeoutPromise]);
+    try {
+      return await browser.storage.local.get(keys);
+    } catch (error) {
+      console.error('Storage get error:', error);
+      return {};
+    }
   }
 
-  /**
-   * Sets data in storage
-   * @param {Object} data - Data to store
-   * @returns {Promise<void>}
-   */
   async set(data) {
-    return await browser.storage.local.set(data);
+    try {
+      await browser.storage.local.set(data);
+    } catch (error) {
+      console.error('Storage set error:', error);
+    }
   }
 
-  /**
-   * Removes data from storage
-   * @param {string[]} keys - Keys to remove
-   * @returns {Promise<void>}
-   */
   async remove(keys) {
-    return await browser.storage.local.remove(keys);
+    try {
+      await browser.storage.local.remove(keys);
+    } catch (error) {
+      console.error('Storage remove error:', error);
+    }
+  }
+}
+
+/**
+ * API service for handling AI provider communications
+ */
+class APIService {
+  constructor() {
+    this.providers = {
+      claude: {
+        name: 'Claude',
+        validateKey: (key) => key && key.startsWith('sk-ant-') && key.length > 20,
+        call: this.callClaudeAPI.bind(this)
+      },
+      openai: {
+        name: 'OpenAI',
+        validateKey: (key) => key && key.startsWith('sk-') && key.length > 20,
+        call: this.callOpenAIAPI.bind(this)
+      },
+      gemini: {
+        name: 'Gemini',
+        validateKey: (key) => key && key.length > 20,
+        call: this.callGeminiAPI.bind(this)
+      }
+    };
+  }
+
+  validateApiKey(apiKey, provider) {
+    const providerConfig = this.providers[provider];
+    if (!providerConfig) {
+      throw new Error(`Unknown provider: ${provider}`);
+    }
+    return providerConfig.validateKey(apiKey);
+  }
+
+  validateSystemPrompt(prompt) {
+    if (!prompt || typeof prompt !== 'string') {
+      throw new Error('Invalid system prompt');
+    }
+    if (prompt.length > 100000) {
+      throw new Error('System prompt too long');
+    }
+    return prompt.trim();
+  }
+
+  async callClaudeAPI(apiKey, prompt, controller) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 2000,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Claude API error: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.content[0].text;
+  }
+
+  async callOpenAIAPI(apiKey, prompt, controller) {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        max_tokens: 2000,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful assistant that summarizes YouTube comments.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  }
+
+  async callGeminiAPI(apiKey, prompt, controller) {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          maxOutputTokens: 2000
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
+  }
+
+  async callAIProvider(provider, apiKey, prompt, controller) {
+    const providerConfig = this.providers[provider];
+    if (!providerConfig) {
+      throw new Error(`Unknown provider: ${provider}`);
+    }
+
+    return await providerConfig.call(apiKey, prompt, controller);
+  }
+
+  async generateSummary(comments, apiKey, systemPrompt, provider, timeout = 30000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      // Validate inputs
+      this.validateApiKey(apiKey, provider);
+      this.validateSystemPrompt(systemPrompt);
+
+      if (!Array.isArray(comments) || comments.length === 0) {
+        throw new Error('No comments provided');
+      }
+
+      // Create prompt
+      const commentText = comments.join('\n\n');
+      const fullPrompt = `${systemPrompt}\n\nComments:\n${commentText}`;
+
+      // Call AI provider
+      const summary = await this.callAIProvider(provider, apiKey, fullPrompt, controller);
+      
+      // Sanitize response
+      return this.sanitizeApiResponse(summary);
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  sanitizeApiResponse(text) {
+    if (typeof text !== 'string') return '';
+    
+    return text
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, '')
+      .replace(/eval\s*\(/gi, '')
+      .trim()
+      .substring(0, 5000);
+  }
+
+  getProviders() {
+    return this.providers;
+  }
+
+  getDefaultSystemPrompt() {
+    return `Please provide a comprehensive summary of the YouTube video comments below. Focus on the main themes, sentiments, and key points discussed. Include both positive and negative feedback, and highlight any recurring topics or concerns. Make the summary easy to read and well-structured.`;
   }
 }
 
@@ -110,158 +281,92 @@ class BackgroundScriptController {
     this.storageManager = new StorageManager();
   }
 
-  /**
-   * Handles summarize requests
-   * @param {Object} request - Request object
-   * @param {Object} sender - Message sender
-   * @returns {Promise<Object>} Response object
-   */
   async handleSummarizeRequest(request, sender) {
     try {
-      Logger.info('Starting summarize request...');
-
-      // Validate sender
-      if (!sender || !sender.tab) {
-        throw new Error('Invalid request sender');
+      // Check rate limit
+      if (!this.rateLimitManager.checkRateLimit(sender.tab.id)) {
+        return { error: 'Rate limit exceeded. Please wait before making another request.' };
       }
-
-      // Rate limiting check
-      const tabId = sender.tab.id || 'unknown';
-      this.rateLimitManager.checkRateLimit(tabId);
 
       // Validate comments
-      const validatedComments = this.validateComments(request.comments);
-      Logger.info(`Processing ${validatedComments.length} validated comments`);
+      this.validateComments(request.comments);
 
-      // Retrieve settings from storage
-      const { apiKey, systemPrompt, aiProvider = 'claude' } = await this.storageManager.get([
-        'apiKey', 
-        'systemPrompt', 
-        'aiProvider'
-      ]);
+      // Get stored settings
+      const { apiKey, systemPrompt, aiProvider } = await this.storageManager.get(['apiKey', 'systemPrompt', 'aiProvider']);
       
       if (!apiKey) {
-        const providerName = this.apiService.getProviders()[aiProvider]?.name || 'AI';
-        return { error: `${providerName} API key not set. Please set it in the extension options.` };
+        return { error: 'API key not configured. Please set your API key in the extension options.' };
       }
 
-      // Validate API key for selected provider
-      this.apiService.validateApiKey(apiKey, aiProvider);
-      Logger.info(`API key validated successfully for ${aiProvider}`);
-
-      // Validate and sanitize system prompt
-      const promptToUse = this.apiService.validateSystemPrompt(systemPrompt);
-      Logger.info('Using system prompt:', promptToUse.substring(0, 100) + '...');
+      if (!aiProvider) {
+        return { error: 'AI provider not selected. Please select an AI provider in the extension options.' };
+      }
 
       // Generate summary
       const summary = await this.apiService.generateSummary(
-        validatedComments,
+        request.comments,
         apiKey,
-        promptToUse,
+        systemPrompt || this.apiService.getDefaultSystemPrompt(),
         aiProvider
       );
 
-      Logger.info('Summary generated successfully');
       return { summary };
-      
     } catch (error) {
-      Logger.error('Error in background script:', error.message);
-      return { error: 'Error: ' + String(error.message).substring(0, 500) };
+      console.error('Summarize request error:', error);
+      return { error: error.message };
     }
   }
 
-  /**
-   * Handles provider info requests
-   * @returns {Object} Provider information
-   */
   handleGetProvidersRequest() {
     return { providers: this.apiService.getProviders() };
   }
 
-  /**
-   * Validates and processes comments
-   * @param {string[]} comments - Raw comments array
-   * @returns {string[]} Processed comments
-   * @throws {Error} If validation fails
-   */
   validateComments(comments) {
-    if (!comments || !Array.isArray(comments)) {
-      throw new Error('Invalid comments data: must be an array');
+    if (!Array.isArray(comments)) {
+      throw new Error('Invalid comments format');
     }
-
+    
     if (comments.length === 0) {
       throw new Error('No comments provided');
     }
-
-    if (comments.length > CONSTANTS.VALIDATION.MAX_COMMENTS) {
-      throw new Error(`Too many comments: maximum ${CONSTANTS.VALIDATION.MAX_COMMENTS} allowed`);
+    
+    if (comments.length > 200) {
+      throw new Error('Too many comments (max 200)');
     }
-
-    // Enhanced validation with type checking and sanitization
-    const processedComments = comments
-      .filter(comment => {
-        if (typeof comment !== 'string') return false;
-        const trimmed = comment.trim();
-        return trimmed.length >= CONSTANTS.VALIDATION.MIN_COMMENT_LENGTH && 
-               trimmed.length <= CONSTANTS.VALIDATION.MAX_COMMENT_LENGTH;
-      })
-      .map(comment => {
-        // Basic sanitization to prevent prompt injection
-        return comment
-          .substring(0, CONSTANTS.VALIDATION.MAX_COMMENT_LENGTH)
-          .trim()
-          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
-          .replace(/\u0000/g, ''); // Remove null bytes
-      })
-      .slice(0, CONSTANTS.VALIDATION.MAX_COMMENTS);
-
-    if (processedComments.length === 0) {
-      throw new Error('No valid comments found after processing');
+    
+    for (const comment of comments) {
+      if (typeof comment !== 'string' || comment.length < 5 || comment.length > 1000) {
+        throw new Error('Invalid comment format or length');
+      }
     }
-
-    return processedComments;
   }
 
-  /**
-   * Handles incoming messages
-   * @param {Object} request - Request object
-   * @param {Object} sender - Message sender
-   * @param {Function} sendResponse - Response function
-   * @returns {boolean} Whether response is async
-   */
   handleMessage(request, sender, sendResponse) {
-    Logger.info('Background script received message type:', request.type);
-
-    if (request.type === 'summarize') {
-      // Handle the async operation
-      (async () => {
-        try {
-          const response = await this.handleSummarizeRequest(request, sender);
-          sendResponse(response);
-        } catch (error) {
-          Logger.error('Error in async message handler:', error);
-          sendResponse({ error: 'Internal server error' });
+    (async () => {
+      try {
+        let response;
+        
+        switch (request.type) {
+          case 'summarize':
+            response = await this.handleSummarizeRequest(request, sender);
+            break;
+          case 'getProviders':
+            response = this.handleGetProvidersRequest();
+            break;
+          default:
+            response = { error: 'Unknown request type' };
         }
-      })();
-
-      return true; // Indicate async response
-    }
+        
+        sendResponse(response);
+      } catch (error) {
+        console.error('Message handling error:', error);
+        sendResponse({ error: error.message });
+      }
+    })();
     
-    if (request.type === 'getProviders') {
-      const response = this.handleGetProvidersRequest();
-      sendResponse(response);
-      return false;
-    }
-    
-    // Reject unknown message types
-    Logger.warn('Unknown message type:', request.type);
-    sendResponse({ error: 'Unknown request type' });
-    return false;
+    return true; // Keep message channel open for async response
   }
 
-  /**
-   * Performs cleanup on extension unload
-   */
   cleanup() {
     this.rateLimitManager.cleanup();
   }

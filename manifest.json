@@ -42,16 +42,6 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com; style-src 'self' 'unsafe-inline'"
   },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "style.css",
-        "utils.js",
-        "services/*.js"
-      ],
-      "matches": ["*://*.youtube.com/*"]
-    }
-  ],
   "minimum_chrome_version": "88",
   "action": {
     "default_title": "YouTube Comment Summarizer",
