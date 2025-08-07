@@ -227,10 +227,10 @@ class ContentScriptController {
     const originalScrollTop = window.scrollY;
     const comments = [];
     let attempts = 0;
-    const maxAttempts = 30; // Much more attempts for better coverage
+    const maxAttempts = 25; // Good number of attempts
     
     try {
-      console.log('Starting deep comment loading with aggressive scrolling...');
+      console.log('Starting deep comment loading with bottom scrolling...');
       
       // First, scroll to the comments section
       const commentsSection = document.querySelector('#comments');
@@ -254,8 +254,8 @@ class ContentScriptController {
         if (comments.length === lastCommentCount) {
           noProgressCount++;
           console.log(`No progress for ${noProgressCount} attempts`);
-          if (noProgressCount >= 5) { // Increased tolerance
-            console.log('No progress for 5 attempts, stopping...');
+          if (noProgressCount >= 3) {
+            console.log('No progress for 3 attempts, stopping...');
             break;
           }
         } else {
@@ -263,68 +263,20 @@ class ContentScriptController {
         }
         lastCommentCount = comments.length;
         
-        // Much more aggressive scrolling
-        const currentScrollY = window.scrollY;
-        const viewportHeight = window.innerHeight;
+        // ALWAYS scroll to the bottom of the page
         const documentHeight = document.body.scrollHeight;
-        
-        // Strategy 1: Scroll down by 2x viewport height (more aggressive)
-        let scrollTarget = Math.min(documentHeight, currentScrollY + (viewportHeight * 2));
-        window.scrollTo(0, scrollTarget);
-        
-        console.log(`Scrolled from ${currentScrollY} to ${scrollTarget} (2x viewport)`);
+        console.log(`Scrolling to bottom of page (height: ${documentHeight})...`);
+        window.scrollTo(0, documentHeight);
         
         // Wait for content to load
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Strategy 2: Scroll to bottom more frequently (every 2nd attempt)
-        if (attempts % 2 === 0) {
-          console.log('Trying to scroll to bottom to trigger infinite scroll...');
-          window.scrollTo(0, documentHeight);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
-        
-        // Strategy 3: Scroll within comments section more frequently
-        const commentsSection = document.querySelector('#comments');
-        if (commentsSection && attempts % 2 === 1) {
-          console.log('Trying to scroll within comments section...');
-          const commentRect = commentsSection.getBoundingClientRect();
-          if (commentRect.bottom < window.innerHeight) {
-            // Comments section is visible, scroll down more aggressively
-            window.scrollBy(0, viewportHeight * 1.5);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-        
-        // Strategy 4: Try scrolling to very bottom every 5th attempt
-        if (attempts % 5 === 0) {
-          console.log('Scrolling to very bottom to trigger more loading...');
-          window.scrollTo(0, documentHeight + 1000); // Scroll beyond bottom
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-        
-        // Check if we've reached the bottom
+        // Check if new content was loaded
         const newHeight = document.body.scrollHeight;
-        const newScrollY = window.scrollY;
-        
-        console.log(`New height: ${newHeight}, New scroll Y: ${newScrollY}`);
-        
-        if (newHeight === documentHeight && newScrollY >= documentHeight - viewportHeight) {
-          console.log('Reached bottom of page, trying one more aggressive scroll...');
-          // Try one more aggressive scroll to bottom
-          window.scrollTo(0, documentHeight + 500);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          // Check again
-          const finalHeight = document.body.scrollHeight;
-          if (finalHeight === newHeight) {
-            console.log('Definitely reached bottom, stopping...');
-            break;
-          }
-        }
+        console.log(`New page height: ${newHeight} (was: ${documentHeight})`);
         
         // If we've found a good number of comments, we can stop early
-        if (comments.length > 500) {
+        if (comments.length > 400) {
           console.log('Found sufficient comments, stopping early...');
           break;
         }
@@ -338,7 +290,7 @@ class ContentScriptController {
     
     // Remove duplicates
     const uniqueComments = [...new Set(comments)];
-    console.log(`Found ${uniqueComments.length} unique comments with aggressive deep loading`);
+    console.log(`Found ${uniqueComments.length} unique comments with bottom scrolling`);
     return uniqueComments;
   }
 
