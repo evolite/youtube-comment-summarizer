@@ -14,16 +14,30 @@ class ContentScriptController {
    */
   async initialize() {
     try {
-      if (this.isInitialized) return;
+      if (this.isInitialized) {
+        // Double-check that buttons are actually present
+        const commentsSection = document.querySelector('#comments');
+        const buttons = commentsSection?.querySelector('.yt-summarize-button-container');
+        if (commentsSection && buttons) {
+          return; // Already initialized and buttons are present
+        } else {
+          console.log('Marked as initialized but buttons missing, re-initializing...');
+          this.isInitialized = false;
+        }
+      }
       
       const commentsSection = await this.waitForCommentsSection();
       if (commentsSection) {
         this.injectButtons(commentsSection);
         this.isInitialized = true;
         console.log('Content script initialized successfully');
+      } else {
+        console.warn('Comments section not found, will retry later');
+        this.isInitialized = false;
       }
     } catch (error) {
-      console.warn('Comments section not found, will retry:', error.message);
+      console.warn('Initialization error, will retry:', error.message);
+      this.isInitialized = false;
     }
   }
 
@@ -537,6 +551,16 @@ class ContentScriptController {
       console.log('Re-initializing after navigation...');
       this.initialize();
     }, 500);
+    
+    // Additional safety check after a longer delay
+    setTimeout(() => {
+      const commentsSection = document.querySelector('#comments');
+      const buttons = commentsSection?.querySelector('.yt-summarize-button-container');
+      if (commentsSection && !buttons) {
+        console.log('Navigation safety check: Buttons still missing, forcing re-initialization...');
+        this.forceReinitialize();
+      }
+    }, 2000);
   }
 
   /**
@@ -547,7 +571,17 @@ class ContentScriptController {
     if (commentsSection && !commentsSection.querySelector('.yt-summarize-button-container')) {
       console.log('Buttons missing, re-injecting...');
       this.injectButtons(commentsSection);
+      this.isInitialized = true;
     }
+  }
+
+  /**
+   * Force re-initialization if needed
+   */
+  forceReinitialize() {
+    console.log('Force re-initializing extension...');
+    this.isInitialized = false;
+    this.initialize();
   }
 
   /**
@@ -681,19 +715,33 @@ const controller = new ContentScriptController();
  */
 async function initializeWithRetry() {
   let attempts = 0;
-  const maxAttempts = 3;
+  const maxAttempts = 5; // Increased attempts
   
   while (attempts < maxAttempts) {
     try {
       await controller.initialize();
-      break; // Success, exit loop
-    } catch (error) {
-      attempts++;
-      if (attempts < maxAttempts) {
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      // Verify buttons are actually present
+      const commentsSection = document.querySelector('#comments');
+      const buttons = commentsSection?.querySelector('.yt-summarize-button-container');
+      if (commentsSection && buttons) {
+        console.log('Initialization successful with buttons present');
+        break; // Success, exit loop
+      } else {
+        console.log('Initialization completed but buttons not found, retrying...');
+        controller.isInitialized = false;
       }
+    } catch (error) {
+      console.warn(`Initialization attempt ${attempts + 1} failed:`, error.message);
     }
+    attempts++;
+    if (attempts < maxAttempts) {
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  
+  if (attempts >= maxAttempts) {
+    console.warn('Failed to initialize after all attempts, will retry via periodic check');
   }
 }
 
@@ -705,12 +753,18 @@ if (window.location.pathname === '/watch') {
   controller.navigationHandler = new NavigationHandler(controller);
   controller.navigationHandler.init();
   
-  // Periodic check to ensure buttons are always present
+  // More aggressive periodic check to ensure buttons are always present
   setInterval(() => {
     if (window.location.pathname === '/watch') {
-      controller.ensureButtonsPresent();
+      const commentsSection = document.querySelector('#comments');
+      const buttons = commentsSection?.querySelector('.yt-summarize-button-container');
+      
+      if (commentsSection && !buttons) {
+        console.log('Periodic check: Buttons missing, re-initializing...');
+        controller.forceReinitialize();
+      }
     }
-  }, 5000); // Check every 5 seconds
+  }, 3000); // Check every 3 seconds
 }
 
 // Enhanced cleanup on page unload
