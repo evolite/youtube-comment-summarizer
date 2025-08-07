@@ -54,6 +54,7 @@ class ContentScriptController {
     // Remove existing buttons if any
     const existingButtons = commentsSection.querySelector('.yt-summarize-button-container');
     if (existingButtons) {
+      console.log('Removing existing buttons for re-initialization');
       existingButtons.remove();
     }
 
@@ -82,6 +83,7 @@ class ContentScriptController {
 
     // Insert at the top of comments section
     commentsSection.insertBefore(buttonContainer, commentsSection.firstChild);
+    console.log('Buttons injected successfully');
   }
 
   /**
@@ -501,8 +503,8 @@ class ContentScriptController {
       }
     });
     
-    // Also remove any orphaned elements with our classes
-    const orphanedElements = document.querySelectorAll('.yt-summarize-box, .yt-summarize-loading, .yt-summarize-button-container');
+    // Also remove any orphaned elements with our classes (but NOT buttons)
+    const orphanedElements = document.querySelectorAll('.yt-summarize-box, .yt-summarize-loading');
     orphanedElements.forEach(element => {
       console.log(`Removing orphaned element:`, element.className);
       element.remove();
@@ -531,7 +533,21 @@ class ContentScriptController {
     this.removeTemporaryLoading();
     
     // Re-initialize after a short delay
-    setTimeout(() => this.initialize(), 500);
+    setTimeout(() => {
+      console.log('Re-initializing after navigation...');
+      this.initialize();
+    }, 500);
+  }
+
+  /**
+   * Ensures buttons are always present
+   */
+  ensureButtonsPresent() {
+    const commentsSection = document.querySelector('#comments');
+    if (commentsSection && !commentsSection.querySelector('.yt-summarize-button-container')) {
+      console.log('Buttons missing, re-injecting...');
+      this.injectButtons(commentsSection);
+    }
   }
 
   /**
@@ -688,6 +704,13 @@ initializeWithRetry();
 if (window.location.pathname === '/watch') {
   controller.navigationHandler = new NavigationHandler(controller);
   controller.navigationHandler.init();
+  
+  // Periodic check to ensure buttons are always present
+  setInterval(() => {
+    if (window.location.pathname === '/watch') {
+      controller.ensureButtonsPresent();
+    }
+  }, 5000); // Check every 5 seconds
 }
 
 // Enhanced cleanup on page unload
