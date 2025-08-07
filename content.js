@@ -94,6 +94,22 @@ function performCleanup() {
   isCleaningUp = true;
   
   try {
+    // Remove any existing summary boxes and loading states
+    removeSummaryBox();
+    
+    // Remove any temporary loading elements
+    const tempLoading = document.getElementById('yt-summarize-temp-loading');
+    if (tempLoading && tempLoading.parentNode) {
+      tempLoading.remove();
+    }
+    
+    // Remove any existing buttons
+    const buttonContainer = document.getElementById('yt-summarize-button-container');
+    if (buttonContainer && buttonContainer.parentNode) {
+      buttonContainer.remove();
+    }
+    
+    // Run registered cleanup functions
     cleanupRegistry.forEach(fn => {
       try {
         if (typeof fn === 'function') {
@@ -104,6 +120,8 @@ function performCleanup() {
       }
     });
     cleanupRegistry.clear();
+    
+    console.log('Cleanup completed - removed summaries and UI elements');
   } catch (e) {
     console.error('Critical cleanup error:', e);
   } finally {
@@ -489,6 +507,7 @@ function removeSummaryBox() {
   // Remove any existing summary or loading boxes
   const existingSummary = document.getElementById('yt-summarize-summary');
   const existingLoading = document.getElementById('yt-summarize-loading');
+  const tempLoading = document.getElementById('yt-summarize-temp-loading');
   
   if (existingSummary) {
     existingSummary.remove();
@@ -496,6 +515,10 @@ function removeSummaryBox() {
   
   if (existingLoading) {
     existingLoading.remove();
+  }
+  
+  if (tempLoading) {
+    tempLoading.remove();
   }
   
   // Also remove any legacy boxes that might exist
@@ -509,6 +532,16 @@ function removeSummaryBox() {
   if (legacyLoading) {
     legacyLoading.remove();
   }
+  
+  // Remove any elements with our CSS classes that might be orphaned
+  const orphanedElements = document.querySelectorAll('.yt-summarize-box, .yt-summarize-loading, .yt-summarize-spinner');
+  orphanedElements.forEach(element => {
+    if (element.parentNode) {
+      element.remove();
+    }
+  });
+  
+  console.log('Summary boxes removed');
 }
 
 function showLoading(commentCount) {
@@ -871,8 +904,11 @@ class NavigationHandler {
     try {
       if (window.location.href !== this.currentUrl) {
         this.currentUrl = window.location.href;
-        console.log('URL changed, re-initializing extension...');
+        console.log('URL changed, cleaning up and re-initializing extension...');
 
+        // Remove any existing summary boxes immediately
+        removeSummaryBox();
+        
         // Clean up old components
         performCleanup();
 
@@ -945,10 +981,23 @@ if (window.location.pathname === '/watch') {
 // Enhanced cleanup on page unload
 window.addEventListener('beforeunload', () => {
   try {
+    console.log('Page unloading, performing cleanup...');
     performCleanup();
     navigationHandler.cleanup();
   } catch (error) {
     console.error('Unload cleanup error:', error);
+  }
+}, { passive: true });
+
+// Handle page visibility changes (tab switching, minimizing, etc.)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    try {
+      console.log('Page hidden, removing summaries...');
+      removeSummaryBox();
+    } catch (error) {
+      console.error('Visibility change cleanup error:', error);
+    }
   }
 }, { passive: true });
 
