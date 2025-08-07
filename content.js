@@ -121,7 +121,6 @@ function performCleanup() {
     });
     cleanupRegistry.clear();
     
-    console.log('Cleanup completed - removed summaries and UI elements');
   } catch (e) {
     console.error('Critical cleanup error:', e);
   } finally {
@@ -194,7 +193,6 @@ function injectButton(commentsSection) {
   try {
     // Check if buttons already exist
     if (document.getElementById('summarize-comments-btn')) {
-      console.log('Buttons already exist, skipping injection');
       return;
     }
     
@@ -208,50 +206,24 @@ function injectButton(commentsSection) {
     buttonContainer.id = 'yt-summarize-button-container';
     buttonContainer.className = 'yt-summarize-button-container';
     
+    // Create main summarize button
     const button = createSecureButton();
     const deepButton = createDeepSummarizeButton();
     
-    buttonContainer.appendChild(button);
-    buttonContainer.appendChild(deepButton);
-    
-    // Use insertBefore instead of prepend for better compatibility
-    const firstChild = commentsSection.firstElementChild;
-    if (firstChild) {
-      commentsSection.insertBefore(buttonContainer, firstChild);
-    } else {
-      commentsSection.appendChild(buttonContainer);
-    }
-    
-    // Add event listener for regular summarize button
+    // Add event listeners
     const handleButtonClick = (e) => {
-      try {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        summarizeCommentsHandler();
-      } catch (error) {
-        console.error('Button click error:', error);
-        showSummary('An error occurred. Please try again.', 0, true);
-      }
+      e.preventDefault();
+      e.stopPropagation();
+      summarizeCommentsHandler();
     };
     
-    // Add event listener for deep summarize button
     const handleDeepButtonClick = (e) => {
-      try {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        deepSummarizeCommentsHandler();
-      } catch (error) {
-        console.error('Deep button click error:', error);
-        showSummary('An error occurred. Please try again.', 0, true);
-      }
+      e.preventDefault();
+      e.stopPropagation();
+      deepSummarizeCommentsHandler();
     };
     
-    button.addEventListener('click', handleButtonClick, { passive: false });
-    deepButton.addEventListener('click', handleDeepButtonClick, { passive: false });
-    
-    // Add keyboard support for both buttons
+    button.addEventListener('click', handleButtonClick);
     button.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
@@ -259,6 +231,7 @@ function injectButton(commentsSection) {
       }
     });
     
+    deepButton.addEventListener('click', handleDeepButtonClick);
     deepButton.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
@@ -266,7 +239,17 @@ function injectButton(commentsSection) {
       }
     });
     
-    console.log('Buttons injected successfully');
+    // Add buttons to container
+    buttonContainer.appendChild(button);
+    buttonContainer.appendChild(deepButton);
+    
+    // Insert before the first comment
+    const firstComment = commentsSection.querySelector('ytd-comment-thread-renderer');
+    if (firstComment) {
+      commentsSection.insertBefore(buttonContainer, firstComment);
+    } else {
+      commentsSection.appendChild(buttonContainer);
+    }
     
     // Add to cleanup registry
     addCleanup(() => {
@@ -295,9 +278,6 @@ async function findComments() {
   // First, try to expand reply threads to capture more replies
   await expandReplyThreads();
   
-  // Debug: Check what reply elements we can find
-  debugReplyElements();
-  
   for (const selector of COMMENT_SELECTORS) {
     try {
       const elements = document.querySelectorAll(selector);
@@ -325,59 +305,93 @@ async function findComments() {
     }
   }
   
-  console.log(`Found ${comments.length} comments (including replies)`);
   return comments;
-}
-
-function debugReplyElements() {
-  console.log('=== DEBUG: Checking for reply elements ===');
-  
-  // Check for reply buttons
-  const replyButtons = document.querySelectorAll('[aria-label*="reply"], [aria-label*="Reply"], [aria-label*="replies"], [aria-label*="Replies"]');
-  console.log(`Reply buttons found: ${replyButtons.length}`);
-  replyButtons.forEach((btn, i) => {
-    console.log(`Button ${i}:`, btn.ariaLabel, btn.textContent);
-  });
-  
-  // Check for reply elements
-  const replyElements = document.querySelectorAll('ytd-comment-renderer ytd-comment-renderer, .ytd-comment-renderer .ytd-comment-renderer');
-  console.log(`Reply containers found: ${replyElements.length}`);
-  
-  // Check for reply text elements
-  const replyTextElements = document.querySelectorAll('ytd-comment-renderer ytd-comment-renderer #content-text, ytd-comment-renderer ytd-comment-renderer .comment-text');
-  console.log(`Reply text elements found: ${replyTextElements.length}`);
-  
-  // Check for thread-specific replies
-  const threadReplies = document.querySelectorAll('ytd-comment-thread-renderer ytd-comment-renderer');
-  console.log(`Thread reply elements found: ${threadReplies.length}`);
-  
-  console.log('=== END DEBUG ===');
 }
 
 async function expandReplyThreads() {
   try {
-    console.log('Starting reply thread expansion...');
+    // Comprehensive reply button patterns in multiple languages
+    const replyButtonPatterns = [
+      // English
+      '[aria-label*="View replies"]', '[aria-label*="Show replies"]', '[aria-label*="Replies"]', '[aria-label*="reply"]',
+      '[aria-label*="View reply"]', '[aria-label*="Show reply"]', '[aria-label*="Reply"]',
+      // Spanish
+      '[aria-label*="Ver respuestas"]', '[aria-label*="Mostrar respuestas"]', '[aria-label*="Respuestas"]', '[aria-label*="respuesta"]',
+      // French
+      '[aria-label*="Voir les réponses"]', '[aria-label*="Afficher les réponses"]', '[aria-label*="Réponses"]', '[aria-label*="réponse"]',
+      // German
+      '[aria-label*="Antworten anzeigen"]', '[aria-label*="Antworten"]', '[aria-label*="antwort"]',
+      // Portuguese
+      '[aria-label*="Ver respostas"]', '[aria-label*="Mostrar respostas"]', '[aria-label*="Respostas"]',
+      // Italian
+      '[aria-label*="Visualizza risposte"]', '[aria-label*="Mostra risposte"]', '[aria-label*="Risposte"]',
+      // Japanese
+      '[aria-label*="返信を表示"]', '[aria-label*="返信"]',
+      // Korean
+      '[aria-label*="답글 보기"]', '[aria-label*="답글"]',
+      // Chinese
+      '[aria-label*="查看回复"]', '[aria-label*="显示回复"]', '[aria-label*="回复"]',
+      // Russian
+      '[aria-label*="Показать ответы"]', '[aria-label*="Ответы"]',
+      // Generic patterns
+      '[aria-label*="replies"]', '[aria-label*="reply"]', '[aria-label*="responses"]', '[aria-label*="response"]',
+      '[aria-label*="comments"]', '[aria-label*="comment"]',
+      // Button text patterns
+      'button:contains("replies")', 'button:contains("reply")', 'button:contains("responses")', 'button:contains("response")',
+      // More generic patterns
+      '[role="button"][aria-label*="reply"]', '[role="button"][aria-label*="replies"]',
+      // YouTube-specific patterns
+      '[data-purpose="view-replies"]', '[data-purpose="show-replies"]',
+      // Fallback: any button with reply-related text
+      'button[aria-label*="reply"]', 'button[aria-label*="replies"]', 'button[aria-label*="response"]', 'button[aria-label*="responses"]'
+    ];
     
     // Look for "View replies" buttons and click them
-    const viewRepliesButtons = document.querySelectorAll('[aria-label*="View replies"], [aria-label*="Show replies"], [aria-label*="Replies"], [aria-label*="reply"]');
-    console.log(`Found ${viewRepliesButtons.length} "View replies" buttons`);
+    const viewRepliesButtons = document.querySelectorAll(replyButtonPatterns.join(', '));
     
-    for (const button of viewRepliesButtons) {
+    // Also check for buttons by text content
+    const allButtons = document.querySelectorAll('button, [role="button"]');
+    const textBasedReplyButtons = [];
+    
+    allButtons.forEach(button => {
+      const text = (button.textContent || button.ariaLabel || '').toLowerCase();
+      if (text.includes('reply') || text.includes('replies') || text.includes('response') || text.includes('responses') ||
+          text.includes('respuesta') || text.includes('réponse') || text.includes('antwort') || text.includes('resposta') ||
+          text.includes('risposta') || text.includes('返信') || text.includes('답글') || text.includes('回复') || text.includes('ответ')) {
+        textBasedReplyButtons.push(button);
+      }
+    });
+    
+    // Combine both sets of buttons
+    const allReplyButtons = [...viewRepliesButtons, ...textBasedReplyButtons];
+    const uniqueButtons = [...new Set(allReplyButtons)]; // Remove duplicates
+    
+    for (const button of uniqueButtons) {
       if (button && button.offsetParent !== null && !button.disabled) {
-        console.log('Expanding reply thread:', button.textContent || button.ariaLabel);
         button.click();
         // Small delay between clicks to avoid overwhelming the page
         await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
     
-    // Also look for "Show more replies" buttons
-    const showMoreRepliesButtons = document.querySelectorAll('[aria-label*="Show more replies"], [aria-label*="Load more replies"], [aria-label*="more replies"]');
-    console.log(`Found ${showMoreRepliesButtons.length} "Show more replies" buttons`);
+    // Also look for "Show more replies" buttons with multiple language patterns
+    const moreRepliesPatterns = [
+      // English
+      '[aria-label*="Show more replies"]', '[aria-label*="Load more replies"]', '[aria-label*="more replies"]',
+      // Spanish
+      '[aria-label*="Mostrar más respuestas"]', '[aria-label*="Cargar más respuestas"]',
+      // French
+      '[aria-label*="Afficher plus de réponses"]', '[aria-label*="Charger plus de réponses"]',
+      // German
+      '[aria-label*="Mehr Antworten anzeigen"]', '[aria-label*="Weitere Antworten laden"]',
+      // Generic
+      '[aria-label*="more replies"]', '[aria-label*="load more"]', '[aria-label*="show more"]'
+    ];
+    
+    const showMoreRepliesButtons = document.querySelectorAll(moreRepliesPatterns.join(', '));
     
     for (const button of showMoreRepliesButtons) {
       if (button && button.offsetParent !== null && !button.disabled) {
-        console.log('Loading more replies:', button.textContent || button.ariaLabel);
         button.click();
         // Small delay between clicks to avoid overwhelming the page
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -385,12 +399,7 @@ async function expandReplyThreads() {
     }
     
     // Wait a bit for replies to load
-    console.log('Waiting for replies to load...');
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Check if we successfully expanded any replies
-    const replyElements = document.querySelectorAll('ytd-comment-renderer ytd-comment-renderer #content-text, ytd-comment-renderer ytd-comment-renderer .comment-text');
-    console.log(`Found ${replyElements.length} reply elements after expansion`);
     
   } catch (error) {
     console.warn('Error expanding reply threads:', error);
@@ -398,8 +407,6 @@ async function expandReplyThreads() {
 }
 
 async function loadAllCommentsWithScrolling() {
-  console.log('Loading comments with scrolling to get more data...');
-  
   try {
     const commentsContainer = document.querySelector('#comments');
     if (!commentsContainer) {
@@ -409,7 +416,6 @@ async function loadAllCommentsWithScrolling() {
     // Store original scroll position
     const originalScrollY = window.scrollY;
     let comments = await findComments();
-    console.log(`Initial comments found: ${comments.length}`);
     
     // Scroll down to load more comments (max 5 attempts)
     const maxScrollAttempts = 5;
@@ -437,7 +443,6 @@ async function loadAllCommentsWithScrolling() {
                            document.querySelector('[aria-label*="Load more"]');
       
       if (loadMoreButton && loadMoreButton.offsetParent !== null) {
-        console.log(`Clicking load more button (attempt ${i + 1})`);
         loadMoreButton.click();
         await new Promise(resolve => setTimeout(resolve, scrollDelay));
         
@@ -447,17 +452,14 @@ async function loadAllCommentsWithScrolling() {
       
       // Get updated comment count
       comments = await findComments();
-      console.log(`After scroll attempt ${i + 1}: ${comments.length} comments`);
       
       // If we didn't get any new comments, stop scrolling
       if (comments.length <= beforeScrollCount) {
-        console.log('No new comments loaded, stopping scroll attempts');
         break;
       }
       
       // If we have enough comments, stop early
       if (comments.length >= 200) {
-        console.log('Reached comment limit, stopping scroll attempts');
         break;
       }
     }
@@ -468,7 +470,6 @@ async function loadAllCommentsWithScrolling() {
       behavior: 'smooth'
     });
     
-    console.log(`Final comment count: ${comments.length} (including replies)`);
     return comments.slice(0, 200); // Limit to prevent API overload
     
   } catch (error) {
@@ -478,18 +479,14 @@ async function loadAllCommentsWithScrolling() {
 }
 
 async function loadAllCommentsWithoutScrolling() {
-  console.log('Loading visible comments without scrolling or clicking...');
-  
   try {
     // Get only the comments that are already visible in the DOM
     const comments = await findComments();
-    console.log(`Found ${comments.length} visible comments`);
     
     if (comments.length === 0) {
       throw new Error('No visible comments found');
     }
     
-    console.log(`Using ${comments.length} visible comments for quick analysis`);
     return comments.slice(0, 100); // Limit to prevent API overload
     
   } catch (error) {
@@ -540,8 +537,6 @@ function removeSummaryBox() {
       element.remove();
     }
   });
-  
-  console.log('Summary boxes removed');
 }
 
 function showLoading(commentCount) {
@@ -623,8 +618,6 @@ function showSummary(summary, commentCount, isError = false) {
 }
 
 async function summarizeCommentsHandler() {
-  console.log('Summarize button clicked');
-
   try {
     // Disable button and show processing state
     const button = document.getElementById('summarize-comments-btn');
@@ -634,18 +627,14 @@ async function summarizeCommentsHandler() {
       button.setAttribute('aria-busy', 'true');
     }
 
-    console.log('Loading comments...');
     const comments = await loadAllCommentsWithoutScrolling();
 
     if (!comments || comments.length === 0) {
       throw new Error('No comments found to summarize');
     }
 
-    console.log(`Found ${comments.length} comments, showing loading state...`);
     showLoading(comments.length);
 
-    console.log('Sending comments to background script...');
-    
     // Add timeout to prevent hanging
     const messagePromise = browser.runtime.sendMessage({
       type: 'summarize',
@@ -657,14 +646,12 @@ async function summarizeCommentsHandler() {
     );
     
     const response = await Promise.race([messagePromise, timeoutPromise]);
-    console.log('Received response from background script:', response);
 
     if (response.error) {
       throw new Error(response.error);
     }
 
     if (response.summary) {
-      console.log('Displaying summary...');
       showSummary(response.summary, comments.length, false);
     } else {
       throw new Error('No summary returned from API');
@@ -686,8 +673,6 @@ async function summarizeCommentsHandler() {
 }
 
 async function deepSummarizeCommentsHandler() {
-  console.log('Deep Summarize button clicked');
-
   try {
     // Disable both buttons and show processing state
     const button = document.getElementById('summarize-comments-btn');
@@ -718,7 +703,6 @@ async function deepSummarizeCommentsHandler() {
       commentsSection.insertBefore(tempLoading, commentsSection.firstChild);
     }
 
-    console.log('Loading comments with deep analysis...');
     const comments = await loadAllCommentsWithScrolling();
 
     // Remove temporary loading message
@@ -730,11 +714,8 @@ async function deepSummarizeCommentsHandler() {
       throw new Error('No comments found to summarize');
     }
 
-    console.log(`Found ${comments.length} comments via deep analysis, showing loading state...`);
     showLoading(comments.length);
 
-    console.log('Sending comments to background script...');
-    
     // Add timeout to prevent hanging (longer for deep analysis)
     const messagePromise = browser.runtime.sendMessage({
       type: 'summarize',
@@ -746,14 +727,12 @@ async function deepSummarizeCommentsHandler() {
     );
     
     const response = await Promise.race([messagePromise, timeoutPromise]);
-    console.log('Received response from background script:', response);
 
     if (response.error) {
       throw new Error(response.error);
     }
 
     if (response.summary) {
-      console.log('Displaying deep summary...');
       showSummary(response.summary, comments.length, false);
     } else {
       throw new Error('No summary returned from API');
@@ -904,7 +883,6 @@ class NavigationHandler {
     try {
       if (window.location.href !== this.currentUrl) {
         this.currentUrl = window.location.href;
-        console.log('URL changed, cleaning up and re-initializing extension...');
 
         // Remove any existing summary boxes immediately
         removeSummaryBox();
@@ -930,13 +908,12 @@ class NavigationHandler {
       }
       
       const commentsSection = await waitForCommentsSection();
-      console.log('Comments section found, injecting button...');
       injectButton(commentsSection);
       
       // Reset attempts on success
       this.initializationAttempts = 0;
     } catch (error) {
-      console.log('Comments section not found:', error.message);
+      // Comments section not found, will retry
     }
   }
 
@@ -955,7 +932,6 @@ class NavigationHandler {
 }
 
 // Main initialization with error recovery
-console.log('Content script loaded, initializing...');
 
 const navigationHandler = new NavigationHandler();
 
@@ -963,10 +939,9 @@ const navigationHandler = new NavigationHandler();
 async function initializeExtension() {
   try {
     const commentsSection = await waitForCommentsSection();
-    console.log('Comments section found, injecting button...');
     injectButton(commentsSection);
   } catch (error) {
-    console.log('Comments section not found:', error.message);
+    // Comments section not found, will retry
   }
 }
 
@@ -981,7 +956,6 @@ if (window.location.pathname === '/watch') {
 // Enhanced cleanup on page unload
 window.addEventListener('beforeunload', () => {
   try {
-    console.log('Page unloading, performing cleanup...');
     performCleanup();
     navigationHandler.cleanup();
   } catch (error) {
@@ -993,7 +967,6 @@ window.addEventListener('beforeunload', () => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     try {
-      console.log('Page hidden, removing summaries...');
       removeSummaryBox();
     } catch (error) {
       console.error('Visibility change cleanup error:', error);
