@@ -240,13 +240,8 @@ function injectButton(commentsSection) {
     buttonContainer.appendChild(button);
     buttonContainer.appendChild(deepButton);
     
-    // Insert before the first comment
-    const firstComment = commentsSection.querySelector('ytd-comment-thread-renderer');
-    if (firstComment) {
-      commentsSection.insertBefore(buttonContainer, firstComment);
-    } else {
-      commentsSection.appendChild(buttonContainer);
-    }
+    // Insert at the very beginning of the comments section
+    commentsSection.insertBefore(buttonContainer, commentsSection.firstChild);
     
     // Add to cleanup registry
     addCleanup(() => {
@@ -901,7 +896,6 @@ class NavigationHandler {
 }
 
 // Main initialization with error recovery
-
 const navigationHandler = new NavigationHandler();
 
 // Function to initialize the extension (also used by navigation handler)
