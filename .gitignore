@@ -13,6 +13,9 @@
 *.swo
 *~
 
+# Documentation files
+*.md
+
 # Logs
 *.log
 npm-debug.log*
