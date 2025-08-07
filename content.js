@@ -263,17 +263,32 @@ class ContentScriptController {
         }
         lastCommentCount = comments.length;
         
-        // ALWAYS scroll to the bottom of the page
-        const documentHeight = document.body.scrollHeight;
-        console.log(`Scrolling to bottom of page (height: ${documentHeight})...`);
-        window.scrollTo(0, documentHeight);
+        // Get current page dimensions
+        const currentHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+        const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
+        const viewportHeight = window.innerHeight;
         
-        // Wait for content to load
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log(`Current page height: ${currentHeight}, Current scroll Y: ${currentScrollY}, Viewport height: ${viewportHeight}`);
         
-        // Check if new content was loaded
-        const newHeight = document.body.scrollHeight;
-        console.log(`New page height: ${newHeight} (was: ${documentHeight})`);
+        // Scroll to the very bottom of the page
+        console.log(`Scrolling to bottom of page (height: ${currentHeight})...`);
+        window.scrollTo(0, currentHeight);
+        
+        // Wait for content to load and scrollbar to potentially extend
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Check if new content was loaded (scrollbar extended)
+        const newHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+        const newScrollY = window.pageYOffset || document.documentElement.scrollTop;
+        
+        console.log(`New page height: ${newHeight} (was: ${currentHeight}), New scroll Y: ${newScrollY}`);
+        
+        // If the page got longer, scroll to the new bottom
+        if (newHeight > currentHeight) {
+          console.log('Page extended, scrolling to new bottom...');
+          window.scrollTo(0, newHeight);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
         
         // If we've found a good number of comments, we can stop early
         if (comments.length > 400) {
