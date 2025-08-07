@@ -34,7 +34,7 @@ export class APIService {
       }
     };
 
-    this.defaultSystemPrompt = 'Please provide a concise, flowing summary of the key themes and overall sentiment from the following YouTube comments (including replies). Write in a natural, readable paragraph format without bullet points or numbered lists. Focus on the main themes and overall sentiment:\n\n';
+    this.defaultSystemPrompt = 'Please provide a single short paragraph, concise, flowing summary of the key themes and overall sentiment from the following YouTube comments (including replies). Write in a natural, readable paragraph format without bullet points or numbered lists. Focus on the main themes and overall sentiment:\n\n';
   }
 
   /**

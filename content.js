@@ -172,17 +172,50 @@ class ContentScriptController {
    * Loads visible comments without scrolling
    */
   async loadVisibleComments() {
-    const commentElements = document.querySelectorAll('#content-text');
-    const comments = [];
+    // Multiple selectors to catch different comment structures
+    const commentSelectors = [
+      '#content-text', // Main comment text
+      'ytd-comment-renderer #content-text', // Comment text within comment renderer
+      'ytd-comment-thread-renderer #content-text', // Comment text in thread
+      'ytd-comment-renderer yt-formatted-string', // Formatted comment text
+      'ytd-comment-thread-renderer yt-formatted-string', // Formatted text in thread
+      '[id="content-text"]', // Generic content text
+      'ytd-comment-renderer [id="content-text"]', // Content text in comment renderer
+      'ytd-comment-thread-renderer [id="content-text"]' // Content text in thread
+    ];
     
-    for (const element of commentElements) {
-      const text = element.textContent?.trim();
-      if (text && text.length > 5) {
-        comments.push(text);
+    const comments = [];
+    const seenComments = new Set(); // To avoid duplicates
+    
+    for (const selector of commentSelectors) {
+      const elements = document.querySelectorAll(selector);
+      
+      for (const element of elements) {
+        const text = element.textContent?.trim();
+        
+        if (text && 
+            text.length > 5 && 
+            text.length < 1000 && 
+            !seenComments.has(text)) {
+          
+          // Skip common YouTube UI text
+          if (!text.includes('Show more') && 
+              !text.includes('Load more') && 
+              !text.includes('View replies') && 
+              !text.includes('Reply') &&
+              !text.includes('Like') &&
+              !text.includes('Dislike') &&
+              !text.includes('Share') &&
+              !text.includes('Report')) {
+            
+            comments.push(text);
+            seenComments.add(text);
+          }
+        }
       }
     }
     
-    console.log(`Found ${comments.length} comments from DOM`);
+    console.log(`Found ${comments.length} unique comments from DOM`);
     return comments;
   }
 
@@ -193,23 +226,64 @@ class ContentScriptController {
     const originalScrollTop = window.scrollY;
     const comments = [];
     let attempts = 0;
-    const maxAttempts = 3;
+    const maxAttempts = 5; // Increased attempts
     
     try {
+      // First, expand all reply threads to get more comments
+      await this.expandReplyThreads();
+      
       while (attempts < maxAttempts) {
         // Get current visible comments
         const currentComments = await this.loadVisibleComments();
         comments.push(...currentComments);
         
-        // Try to click "Load more" button
-        const loadMoreButton = document.querySelector('ytd-button-renderer[aria-label*="Load more"]');
+        console.log(`Attempt ${attempts + 1}: Found ${currentComments.length} comments`);
+        
+        // Try multiple selectors for "Load more" buttons
+        const loadMoreSelectors = [
+          'ytd-button-renderer[aria-label*="Load more"]',
+          'ytd-button-renderer[aria-label*="Show more"]',
+          'ytd-button-renderer[aria-label*="View more"]',
+          'button[aria-label*="Load more"]',
+          'button[aria-label*="Show more"]',
+          'button[aria-label*="View more"]',
+          '[aria-label*="Load more"]',
+          '[aria-label*="Show more"]',
+          '[aria-label*="View more"]'
+        ];
+        
+        let loadMoreButton = null;
+        for (const selector of loadMoreSelectors) {
+          loadMoreButton = document.querySelector(selector);
+          if (loadMoreButton) {
+            console.log(`Found load more button with selector: ${selector}`);
+            break;
+          }
+        }
+        
         if (loadMoreButton) {
+          console.log('Clicking load more button...');
           loadMoreButton.click();
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Increased wait time
+          
+          // Wait for new comments to load
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Expand any new reply threads that appeared
+          await this.expandReplyThreads();
         } else {
+          console.log('No load more button found, scrolling down...');
           // Scroll down to load more
-          window.scrollTo(0, document.body.scrollHeight);
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          const currentHeight = document.body.scrollHeight;
+          window.scrollTo(0, currentHeight);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Check if new content was loaded
+          const newHeight = document.body.scrollHeight;
+          if (newHeight === currentHeight) {
+            console.log('No new content loaded, stopping...');
+            break;
+          }
         }
         
         attempts++;
@@ -221,8 +295,58 @@ class ContentScriptController {
     
     // Remove duplicates
     const uniqueComments = [...new Set(comments)];
-    console.log(`Found ${uniqueComments.length} comments with scrolling`);
+    console.log(`Found ${uniqueComments.length} unique comments with deep loading`);
     return uniqueComments;
+  }
+
+  /**
+   * Expands reply threads to get more comments
+   */
+  async expandReplyThreads() {
+    console.log('Expanding reply threads...');
+    
+    const replySelectors = [
+      'ytd-button-renderer[aria-label*="View replies"]',
+      'ytd-button-renderer[aria-label*="Show replies"]',
+      'button[aria-label*="View replies"]',
+      'button[aria-label*="Show replies"]',
+      '[aria-label*="View replies"]',
+      '[aria-label*="Show replies"]',
+      'ytd-button-renderer[aria-label*="Reply"]',
+      'button[aria-label*="Reply"]'
+    ];
+    
+    let expandedCount = 0;
+    const maxExpansions = 20; // Limit to prevent infinite loops
+    
+    for (let i = 0; i < maxExpansions; i++) {
+      let replyButton = null;
+      
+      // Try each selector
+      for (const selector of replySelectors) {
+        const buttons = document.querySelectorAll(selector);
+        for (const button of buttons) {
+          // Check if this button hasn't been clicked yet (not disabled)
+          if (!button.disabled && button.offsetParent !== null) {
+            replyButton = button;
+            break;
+          }
+        }
+        if (replyButton) break;
+      }
+      
+      if (replyButton) {
+        console.log(`Expanding reply thread ${expandedCount + 1}...`);
+        replyButton.click();
+        expandedCount++;
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait between clicks
+      } else {
+        console.log('No more reply buttons to expand');
+        break;
+      }
+    }
+    
+    console.log(`Expanded ${expandedCount} reply threads`);
   }
 
   /**
