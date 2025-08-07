@@ -56,7 +56,7 @@ function validateApiKey(key, provider) {
         formatHint = 'OpenAI API keys should start with "sk-"';
         break;
       case 'gemini':
-        formatHint = 'Gemini API keys are 39 characters long';
+        formatHint = 'Gemini API keys are 20+ characters long';
         break;
     }
     return { valid: false, error: `Invalid API key format for ${providerConfig.name}. ${formatHint}` };
@@ -232,7 +232,7 @@ function updateProviderHelp(provider) {
     case 'gemini':
       linkUrl = 'https://makersuite.google.com/app/apikey';
       linkText = 'Google AI Studio';
-      placeholder = 'Your 39-character API key';
+      placeholder = 'Your API key (20+ characters)';
       break;
   }
   

@@ -38,10 +38,10 @@ const AI_PROVIDERS = {
   },
   gemini: {
     name: 'Google Gemini Pro',
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
-    keyPattern: /^[A-Za-z0-9\-_]{39}$/,
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent',
+    keyPattern: /^[A-Za-z0-9\-_]{20,}$/,
     keyPrefix: '',
-    model: 'gemini-pro',
+    model: 'gemini-1.5-pro-latest',
     maxTokens: 2000 // Increased for deep analysis
   }
 };
@@ -267,10 +267,19 @@ async function callGeminiAPI(apiKey, prompt, controller) {
   });
 
   if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.status}`);
+    let errorText = response.statusText;
+    try {
+      const errorData = await response.text();
+      console.log('Gemini API error response:', errorData);
+      errorText = errorData ? errorData.substring(0, 500) : `HTTP ${response.status}`;
+    } catch (e) {
+      errorText = `HTTP ${response.status}`;
+    }
+    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
+  console.log('Gemini API response:', data);
   return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No summary returned.';
 }
 
