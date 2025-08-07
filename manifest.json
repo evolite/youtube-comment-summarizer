@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Comment Summarizer",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "description": "Securely summarizes YouTube video comments using Claude, OpenAI, or Gemini AI with enhanced privacy and security features.",
   "author": "Your Extension Team",
   "icons": {
@@ -44,7 +44,11 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["style.css"],
+      "resources": [
+        "style.css",
+        "utils.js",
+        "services/*.js"
+      ],
       "matches": ["*://*.youtube.com/*"]
     }
   ],
