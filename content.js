@@ -1,50 +1,31 @@
 // content.js
 
-// Configuration constants with enhanced security
+// Optimized configuration constants for better performance
 const CONFIG = {
-  waitTimeout: 10000, // 10 seconds max wait for comments section
-  loadMoreAttempts: 3, // Reduced to prevent excessive DOM manipulation
-  loadMoreDelay: 1500, // Slightly reduced delay
-  navigationDelay: 1000,
-  retryDelay: 500,
-  maxButtonInjectionAttempts: 5,
-  maxCleanupItems: 100 // Prevent memory leaks
+  waitTimeout: 5000, // Reduced from 10s to 5s
+  loadMoreAttempts: 2, // Reduced from 3 to 2
+  loadMoreDelay: 1000, // Reduced from 1500ms to 1000ms
+  navigationDelay: 500, // Reduced from 1000ms to 500ms
+  retryDelay: 250, // Reduced from 500ms to 250ms
+  maxButtonInjectionAttempts: 3, // Reduced from 5 to 3
+  maxCleanupItems: 50, // Reduced from 100 to 50
+  replyExpansionDelay: 1000, // New: shorter delay for reply expansion
+  scrollDelay: 1500 // New: optimized scroll delay
 };
 
-// Enhanced comment selectors with fallbacks - now includes replies
+// Optimized comment selectors - prioritize most common ones first
 const COMMENT_SELECTORS = [
-  // Main comments
+  // Most common selectors first for faster matching
+  '#content-text',
   'ytd-comment-thread-renderer #content-text',
   '.comment-text',
-  '[data-comment-text]',
-  'ytd-comment-thread-renderer .style-scope.ytd-comment-renderer',
-  '#content-text',
   'yt-formatted-string[slot="content"]',
-  // Reply comments
+  // Reply selectors (less common, so lower priority)
   'ytd-comment-renderer ytd-comment-renderer #content-text',
   'ytd-comment-renderer ytd-comment-renderer .comment-text',
-  'ytd-comment-renderer ytd-comment-renderer [data-comment-text]',
-  'ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]',
-  // Nested replies (replies to replies)
-  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer #content-text',
-  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer .comment-text',
-  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer [data-comment-text]',
-  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]',
-  // Additional reply patterns
-  '.ytd-comment-renderer .ytd-comment-renderer #content-text',
-  '.ytd-comment-renderer .ytd-comment-renderer .comment-text',
-  '.ytd-comment-renderer .ytd-comment-renderer [data-comment-text]',
-  '.ytd-comment-renderer .ytd-comment-renderer yt-formatted-string[slot="content"]',
-  // More specific reply selectors
-  'ytd-comment-thread-renderer ytd-comment-renderer #content-text',
-  'ytd-comment-thread-renderer ytd-comment-renderer .comment-text',
-  'ytd-comment-thread-renderer ytd-comment-renderer [data-comment-text]',
-  'ytd-comment-thread-renderer ytd-comment-renderer yt-formatted-string[slot="content"]',
-  // Deep nested replies in threads
-  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer #content-text',
-  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer .comment-text',
-  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer [data-comment-text]',
-  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]'
+  // Fallback selectors last
+  '[data-comment-text]',
+  'ytd-comment-thread-renderer .style-scope.ytd-comment-renderer'
 ];
 
 // Reply-specific selectors for better targeting
@@ -271,16 +252,42 @@ function injectButton(commentsSection) {
   }
 }
 
+// Optimized comment finding with early termination
 async function findComments() {
   const comments = [];
-  const seenTexts = new Set(); // Prevent duplicates
+  const seenTexts = new Set();
   
-  // First, try to expand reply threads to capture more replies
-  await expandReplyThreads();
+  // Expand replies only if we have comments
+  const initialComments = await findCommentsWithoutExpanding();
+  if (initialComments.length > 0) {
+    await expandReplyThreads();
+  }
   
-  for (const selector of COMMENT_SELECTORS) {
+  // Use cached DOM queries
+  const commentsSection = getCachedCommentsSection();
+  if (!commentsSection) return comments;
+  
+  // Try most efficient selector first
+  const elements = commentsSection.querySelectorAll('#content-text');
+  if (elements.length > 0) {
+    for (const element of elements) {
+      if (!element || !element.textContent) continue;
+      
+      const text = sanitizeText(element.textContent);
+      if (text.length > 5 && !seenTexts.has(text)) {
+        seenTexts.add(text);
+        comments.push(text);
+        
+        if (comments.length >= 200) break;
+      }
+    }
+    return comments;
+  }
+  
+  // Fallback to other selectors only if needed
+  for (const selector of COMMENT_SELECTORS.slice(1)) {
     try {
-      const elements = document.querySelectorAll(selector);
+      const elements = commentsSection.querySelectorAll(selector);
       
       for (const element of elements) {
         if (!element || !element.textContent) continue;
@@ -290,16 +297,11 @@ async function findComments() {
           seenTexts.add(text);
           comments.push(text);
           
-          // Limit total comments to prevent memory issues
-          if (comments.length >= 200) {
-            break;
-          }
+          if (comments.length >= 200) break;
         }
       }
       
-      if (comments.length > 0) {
-        break; // Use first selector that finds comments
-      }
+      if (comments.length > 0) break;
     } catch (error) {
       console.warn(`Error with selector ${selector}:`, error);
     }
@@ -308,98 +310,68 @@ async function findComments() {
   return comments;
 }
 
+// Fast comment finding without reply expansion
+async function findCommentsWithoutExpanding() {
+  const comments = [];
+  const seenTexts = new Set();
+  
+  const commentsSection = getCachedCommentsSection();
+  if (!commentsSection) return comments;
+  
+  // Use only the most efficient selector for quick check
+  const elements = commentsSection.querySelectorAll('#content-text');
+  
+  for (const element of elements) {
+    if (!element || !element.textContent) continue;
+    
+    const text = sanitizeText(element.textContent);
+    if (text.length > 5 && !seenTexts.has(text)) {
+      seenTexts.add(text);
+      comments.push(text);
+      
+      if (comments.length >= 50) break; // Lower limit for quick check
+    }
+  }
+  
+  return comments;
+}
+
+// Debounced reply expansion to prevent excessive clicking
+let replyExpansionTimeout = null;
+
 async function expandReplyThreads() {
   try {
-    // Comprehensive reply button patterns in multiple languages
-    const replyButtonPatterns = [
-      // English
-      '[aria-label*="View replies"]', '[aria-label*="Show replies"]', '[aria-label*="Replies"]', '[aria-label*="reply"]',
-      '[aria-label*="View reply"]', '[aria-label*="Show reply"]', '[aria-label*="Reply"]',
-      // Spanish
-      '[aria-label*="Ver respuestas"]', '[aria-label*="Mostrar respuestas"]', '[aria-label*="Respuestas"]', '[aria-label*="respuesta"]',
-      // French
-      '[aria-label*="Voir les réponses"]', '[aria-label*="Afficher les réponses"]', '[aria-label*="Réponses"]', '[aria-label*="réponse"]',
-      // German
-      '[aria-label*="Antworten anzeigen"]', '[aria-label*="Antworten"]', '[aria-label*="antwort"]',
-      // Portuguese
-      '[aria-label*="Ver respostas"]', '[aria-label*="Mostrar respostas"]', '[aria-label*="Respostas"]',
-      // Italian
-      '[aria-label*="Visualizza risposte"]', '[aria-label*="Mostra risposte"]', '[aria-label*="Risposte"]',
-      // Japanese
-      '[aria-label*="返信を表示"]', '[aria-label*="返信"]',
-      // Korean
-      '[aria-label*="답글 보기"]', '[aria-label*="답글"]',
-      // Chinese
-      '[aria-label*="查看回复"]', '[aria-label*="显示回复"]', '[aria-label*="回复"]',
-      // Russian
-      '[aria-label*="Показать ответы"]', '[aria-label*="Ответы"]',
-      // Generic patterns
-      '[aria-label*="replies"]', '[aria-label*="reply"]', '[aria-label*="responses"]', '[aria-label*="response"]',
-      '[aria-label*="comments"]', '[aria-label*="comment"]',
-      // Button text patterns
-      'button:contains("replies")', 'button:contains("reply")', 'button:contains("responses")', 'button:contains("response")',
-      // More generic patterns
-      '[role="button"][aria-label*="reply"]', '[role="button"][aria-label*="replies"]',
-      // YouTube-specific patterns
-      '[data-purpose="view-replies"]', '[data-purpose="show-replies"]',
-      // Fallback: any button with reply-related text
-      'button[aria-label*="reply"]', 'button[aria-label*="replies"]', 'button[aria-label*="response"]', 'button[aria-label*="responses"]'
-    ];
-    
-    // Look for "View replies" buttons and click them
-    const viewRepliesButtons = document.querySelectorAll(replyButtonPatterns.join(', '));
-    
-    // Also check for buttons by text content
-    const allButtons = document.querySelectorAll('button, [role="button"]');
-    const textBasedReplyButtons = [];
-    
-    allButtons.forEach(button => {
-      const text = (button.textContent || button.ariaLabel || '').toLowerCase();
-      if (text.includes('reply') || text.includes('replies') || text.includes('response') || text.includes('responses') ||
-          text.includes('respuesta') || text.includes('réponse') || text.includes('antwort') || text.includes('resposta') ||
-          text.includes('risposta') || text.includes('返信') || text.includes('답글') || text.includes('回复') || text.includes('ответ')) {
-        textBasedReplyButtons.push(button);
-      }
-    });
-    
-    // Combine both sets of buttons
-    const allReplyButtons = [...viewRepliesButtons, ...textBasedReplyButtons];
-    const uniqueButtons = [...new Set(allReplyButtons)]; // Remove duplicates
-    
-    for (const button of uniqueButtons) {
-      if (button && button.offsetParent !== null && !button.disabled) {
-        button.click();
-        // Small delay between clicks to avoid overwhelming the page
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
+    // Debounce reply expansion to prevent multiple rapid calls
+    if (replyExpansionTimeout) {
+      clearTimeout(replyExpansionTimeout);
     }
     
-    // Also look for "Show more replies" buttons with multiple language patterns
-    const moreRepliesPatterns = [
-      // English
-      '[aria-label*="Show more replies"]', '[aria-label*="Load more replies"]', '[aria-label*="more replies"]',
-      // Spanish
-      '[aria-label*="Mostrar más respuestas"]', '[aria-label*="Cargar más respuestas"]',
-      // French
-      '[aria-label*="Afficher plus de réponses"]', '[aria-label*="Charger plus de réponses"]',
-      // German
-      '[aria-label*="Mehr Antworten anzeigen"]', '[aria-label*="Weitere Antworten laden"]',
-      // Generic
-      '[aria-label*="more replies"]', '[aria-label*="load more"]', '[aria-label*="show more"]'
-    ];
-    
-    const showMoreRepliesButtons = document.querySelectorAll(moreRepliesPatterns.join(', '));
-    
-    for (const button of showMoreRepliesButtons) {
-      if (button && button.offsetParent !== null && !button.disabled) {
-        button.click();
-        // Small delay between clicks to avoid overwhelming the page
-        await new Promise(resolve => setTimeout(resolve, 200));
+    replyExpansionTimeout = setTimeout(async () => {
+      // Use more efficient button detection
+      const replyButtons = document.querySelectorAll('[aria-label*="reply"], [aria-label*="replies"]');
+      
+      // Process buttons in batches to avoid blocking
+      const batchSize = 3;
+      for (let i = 0; i < replyButtons.length; i += batchSize) {
+        const batch = Array.from(replyButtons).slice(i, i + batchSize);
+        
+        for (const button of batch) {
+          if (button && button.offsetParent !== null && !button.disabled) {
+            button.click();
+            await new Promise(resolve => setTimeout(resolve, 100)); // Shorter delay
+          }
+        }
+        
+        // Small delay between batches
+        if (i + batchSize < replyButtons.length) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
       }
-    }
-    
-    // Wait a bit for replies to load
-    await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Shorter wait time for replies to load
+      await new Promise(resolve => setTimeout(resolve, CONFIG.replyExpansionDelay));
+      
+    }, 100); // Small debounce delay
     
   } catch (error) {
     console.warn('Error expanding reply threads:', error);
@@ -408,7 +380,7 @@ async function expandReplyThreads() {
 
 async function loadAllCommentsWithScrolling() {
   try {
-    const commentsContainer = document.querySelector('#comments');
+    const commentsContainer = getCachedCommentsSection();
     if (!commentsContainer) {
       throw new Error('Comments container not found');
     }
@@ -417,25 +389,27 @@ async function loadAllCommentsWithScrolling() {
     const originalScrollY = window.scrollY;
     let comments = await findComments();
     
-    // Scroll down to load more comments (max 5 attempts)
-    const maxScrollAttempts = 5;
-    const scrollDelay = 2000; // 2 seconds between scrolls
+    // Reduced scroll attempts for better performance
+    const maxScrollAttempts = 3; // Reduced from 5 to 3
     
     for (let i = 0; i < maxScrollAttempts; i++) {
       const beforeScrollCount = comments.length;
       
-      // Scroll to the bottom of the comments section
+      // More efficient scrolling - scroll to specific position
       const commentsBottom = commentsContainer.getBoundingClientRect().bottom + window.scrollY;
       window.scrollTo({
-        top: commentsBottom + 500,
-        behavior: 'smooth'
+        top: commentsBottom + 300, // Reduced from 500 to 300
+        behavior: 'auto' // Use 'auto' instead of 'smooth' for faster scrolling
       });
       
-      // Wait for new comments to load
-      await new Promise(resolve => setTimeout(resolve, scrollDelay));
+      // Shorter wait time
+      await new Promise(resolve => setTimeout(resolve, CONFIG.scrollDelay));
       
-      // Expand reply threads to capture more replies
-      await expandReplyThreads();
+      // Expand replies only if we have comments
+      const newComments = await findCommentsWithoutExpanding();
+      if (newComments.length > 0) {
+        await expandReplyThreads();
+      }
       
       // Look for "Load more" button and click it
       const loadMoreButton = document.querySelector('ytd-continuation-item-renderer button') ||
@@ -444,9 +418,9 @@ async function loadAllCommentsWithScrolling() {
       
       if (loadMoreButton && loadMoreButton.offsetParent !== null) {
         loadMoreButton.click();
-        await new Promise(resolve => setTimeout(resolve, scrollDelay));
+        await new Promise(resolve => setTimeout(resolve, CONFIG.scrollDelay));
         
-        // Expand reply threads again after loading more comments
+        // Expand replies again after loading more comments
         await expandReplyThreads();
       }
       
@@ -459,7 +433,7 @@ async function loadAllCommentsWithScrolling() {
       }
       
       // If we have enough comments, stop early
-      if (comments.length >= 200) {
+      if (comments.length >= 150) { // Reduced from 200 to 150
         break;
       }
     }
@@ -467,10 +441,10 @@ async function loadAllCommentsWithScrolling() {
     // Restore original scroll position
     window.scrollTo({
       top: originalScrollY,
-      behavior: 'smooth'
+      behavior: 'auto' // Use 'auto' for faster restoration
     });
     
-    return comments.slice(0, 200); // Limit to prevent API overload
+    return comments.slice(0, 150); // Reduced limit
     
   } catch (error) {
     console.error('Error loading comments with scrolling:', error);
@@ -768,20 +742,21 @@ async function deepSummarizeCommentsHandler() {
   }
 }
 
-// Enhanced Navigation handling with better error recovery
+// Enhanced Navigation handling with throttling for better performance
 class NavigationHandler {
   constructor() {
     this.currentUrl = window.location.href;
     this.observer = null;
     this.isInitialized = false;
     this.initializationAttempts = 0;
+    this.navigationThrottle = null;
   }
 
   init() {
     if (this.isInitialized) return;
 
     try {
-      // Listen for browser navigation events
+      // Listen for browser navigation events with throttling
       window.addEventListener('popstate', this.handleNavigation.bind(this), { passive: true });
 
       // Override pushState and replaceState to catch programmatic navigation
@@ -791,7 +766,6 @@ class NavigationHandler {
       this.setupMutationObserver();
 
       this.isInitialized = true;
-      console.log('Navigation handler initialized');
     } catch (error) {
       console.error('Failed to initialize navigation handler:', error);
     }
@@ -802,35 +776,15 @@ class NavigationHandler {
       const originalPushState = history.pushState;
       const originalReplaceState = history.replaceState;
 
-      history.pushState = (...args) => {
-        try {
-          originalPushState.apply(history, args);
-          setTimeout(() => this.handleNavigation(), 100);
-        } catch (e) {
-          console.warn('PushState override error:', e);
-          originalPushState.apply(history, args);
-        }
-      };
+      history.pushState = function(...args) {
+        originalPushState.apply(history, args);
+        this.handleNavigation();
+      }.bind(this);
 
-      history.replaceState = (...args) => {
-        try {
-          originalReplaceState.apply(history, args);
-          setTimeout(() => this.handleNavigation(), 100);
-        } catch (e) {
-          console.warn('ReplaceState override error:', e);
-          originalReplaceState.apply(history, args);
-        }
-      };
-
-      // Add to cleanup registry
-      addCleanup(() => {
-        try {
-          history.pushState = originalPushState;
-          history.replaceState = originalReplaceState;
-        } catch (e) {
-          console.warn('History API cleanup error:', e);
-        }
-      });
+      history.replaceState = function(...args) {
+        originalReplaceState.apply(history, args);
+        this.handleNavigation();
+      }.bind(this);
     } catch (error) {
       console.error('Failed to intercept history API:', error);
     }
@@ -839,40 +793,27 @@ class NavigationHandler {
   setupMutationObserver() {
     try {
       this.observer = new MutationObserver((mutations) => {
-        let shouldReinit = false;
-
-        mutations.forEach((mutation) => {
+        // Only process if we're on a watch page
+        if (window.location.pathname !== '/watch') return;
+        
+        // Check for comments section changes
+        for (const mutation of mutations) {
           if (mutation.type === 'childList') {
-            // Check if comments section was added or changed
-            const commentsSection = document.querySelector('#comments');
-            if (commentsSection && !document.getElementById('summarize-comments-btn')) {
-              shouldReinit = true;
+            for (const node of mutation.addedNodes) {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                if (node.id === 'comments' || node.querySelector('#comments')) {
+                  this.handleNavigation();
+                  break;
+                }
+              }
             }
           }
-        });
-
-        if (shouldReinit) {
-          console.log('Comments section detected after navigation, injecting button...');
-          this.initializeExtension();
         }
       });
 
-      // Start observing with error handling
       this.observer.observe(document.body, {
         childList: true,
         subtree: true
-      });
-
-      // Add to cleanup registry
-      addCleanup(() => {
-        if (this.observer) {
-          try {
-            this.observer.disconnect();
-            this.observer = null;
-          } catch (e) {
-            console.warn('Observer cleanup error:', e);
-          }
-        }
       });
     } catch (error) {
       console.error('Failed to setup mutation observer:', error);
@@ -880,22 +821,29 @@ class NavigationHandler {
   }
 
   handleNavigation() {
-    try {
-      if (window.location.href !== this.currentUrl) {
-        this.currentUrl = window.location.href;
-
-        // Remove any existing summary boxes immediately
-        removeSummaryBox();
-        
-        // Clean up old components
-        performCleanup();
-
-        // Wait for page to load, then re-initialize
-        setTimeout(() => this.initializeExtension(), CONFIG.navigationDelay);
-      }
-    } catch (error) {
-      console.error('Navigation handling error:', error);
+    // Throttle navigation handling to prevent excessive calls
+    if (this.navigationThrottle) {
+      clearTimeout(this.navigationThrottle);
     }
+    
+    this.navigationThrottle = setTimeout(() => {
+      try {
+        if (window.location.href !== this.currentUrl) {
+          this.currentUrl = window.location.href;
+
+          // Remove any existing summary boxes immediately
+          removeSummaryBox();
+          
+          // Clean up old components
+          performCleanup();
+
+          // Wait for page to load, then re-initialize
+          setTimeout(() => this.initializeExtension(), CONFIG.navigationDelay);
+        }
+      } catch (error) {
+        console.error('Navigation handling error:', error);
+      }
+    }, 100); // 100ms throttle
   }
 
   async initializeExtension() {
@@ -903,7 +851,6 @@ class NavigationHandler {
       this.initializationAttempts++;
       
       if (this.initializationAttempts > CONFIG.maxButtonInjectionAttempts) {
-        console.warn('Max initialization attempts reached');
         return;
       }
       
@@ -922,6 +869,10 @@ class NavigationHandler {
       if (this.observer) {
         this.observer.disconnect();
         this.observer = null;
+      }
+      if (this.navigationThrottle) {
+        clearTimeout(this.navigationThrottle);
+        this.navigationThrottle = null;
       }
       this.isInitialized = false;
       this.initializationAttempts = 0;
