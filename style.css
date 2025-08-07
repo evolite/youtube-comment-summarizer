@@ -64,6 +64,14 @@
   }
 }
 
+/* Button container */
+.yt-summarize-button-container {
+  display: flex;
+  gap: var(--yt-spacing-sm);
+  margin: var(--yt-spacing-sm) 0;
+  flex-wrap: wrap;
+}
+
 /* Main summarize button - YouTube style */
 .yt-summarize-btn {
   display: inline-flex;
@@ -71,7 +79,6 @@
   justify-content: center;
   min-height: 36px;
   padding: 0 var(--yt-spacing-lg);
-  margin: var(--yt-spacing-sm) 0;
   font-family: var(--yt-font-family);
   font-size: var(--yt-font-size-medium);
   font-weight: var(--yt-font-weight-medium);
@@ -89,6 +96,14 @@
   transition: background-color 0.1s cubic-bezier(0.05, 0, 0, 1);
   position: relative;
   overflow: hidden;
+  margin: 0;
+}
+
+/* Secondary button style for Deep Summarize */
+.yt-summarize-btn-secondary {
+  background-color: var(--yt-spec-suggested-action);
+  color: var(--yt-spec-text-primary);
+  border: 1px solid var(--yt-spec-outline);
 }
 
 .yt-summarize-btn::before {
@@ -120,6 +135,16 @@
 .yt-summarize-btn:focus {
   outline: 2px solid var(--yt-spec-call-to-action);
   outline-offset: 2px;
+}
+
+/* Secondary button hover states */
+.yt-summarize-btn-secondary:hover:not(:disabled) {
+  background-color: var(--yt-spec-button-chip-background-hover);
+}
+
+.yt-summarize-btn-secondary:disabled {
+  background-color: var(--yt-spec-suggested-action);
+  opacity: 0.5;
 }
 
 /* Loading box - YouTube notification style */
@@ -237,11 +262,17 @@
 
 /* Responsive design for mobile YouTube */
 @media (max-width: 768px) {
+  .yt-summarize-button-container {
+    flex-direction: column;
+    gap: var(--yt-spacing-xs);
+  }
+
   .yt-summarize-btn {
     min-height: 32px;
     line-height: 32px;
     padding: 0 var(--yt-spacing-md);
     font-size: var(--yt-font-size-small);
+    width: 100%;
   }
 
   .yt-summarize-box,

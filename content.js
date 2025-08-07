@@ -105,11 +105,24 @@ function createSecureButton() {
   return button;
 }
 
+function createDeepSummarizeButton() {
+  const button = document.createElement('button');
+  button.id = 'deep-summarize-comments-btn';
+  button.className = 'yt-summarize-btn yt-summarize-btn-secondary';
+  button.type = 'button';
+  button.textContent = 'Deep Summarize';
+  button.setAttribute('role', 'button');
+  button.setAttribute('aria-label', 'Load more comments and summarize using AI');
+  button.setAttribute('tabindex', '0');
+  
+  return button;
+}
+
 function injectButton(commentsSection) {
   try {
-    // Check if button already exists
+    // Check if buttons already exist
     if (document.getElementById('summarize-comments-btn')) {
-      console.log('Button already exists, skipping injection');
+      console.log('Buttons already exist, skipping injection');
       return;
     }
     
@@ -118,17 +131,26 @@ function injectButton(commentsSection) {
       throw new Error('Invalid comments section');
     }
     
+    // Create button container
+    const buttonContainer = document.createElement('div');
+    buttonContainer.id = 'yt-summarize-button-container';
+    buttonContainer.className = 'yt-summarize-button-container';
+    
     const button = createSecureButton();
+    const deepButton = createDeepSummarizeButton();
+    
+    buttonContainer.appendChild(button);
+    buttonContainer.appendChild(deepButton);
     
     // Use insertBefore instead of prepend for better compatibility
     const firstChild = commentsSection.firstElementChild;
     if (firstChild) {
-      commentsSection.insertBefore(button, firstChild);
+      commentsSection.insertBefore(buttonContainer, firstChild);
     } else {
-      commentsSection.appendChild(button);
+      commentsSection.appendChild(buttonContainer);
     }
     
-    // Add event listener with proper error handling
+    // Add event listener for regular summarize button
     const handleButtonClick = (e) => {
       try {
         e.preventDefault();
@@ -141,9 +163,23 @@ function injectButton(commentsSection) {
       }
     };
     
-    button.addEventListener('click', handleButtonClick, { passive: false });
+    // Add event listener for deep summarize button
+    const handleDeepButtonClick = (e) => {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        deepSummarizeCommentsHandler();
+      } catch (error) {
+        console.error('Deep button click error:', error);
+        showSummary('An error occurred. Please try again.', 0, true);
+      }
+    };
     
-    // Add keyboard support
+    button.addEventListener('click', handleButtonClick, { passive: false });
+    deepButton.addEventListener('click', handleDeepButtonClick, { passive: false });
+    
+    // Add keyboard support for both buttons
     button.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
@@ -151,15 +187,24 @@ function injectButton(commentsSection) {
       }
     });
     
-    console.log('Button injected successfully');
+    deepButton.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleDeepButtonClick(e);
+      }
+    });
+    
+    console.log('Buttons injected successfully');
     
     // Add to cleanup registry
     addCleanup(() => {
       try {
-        if (button && button.parentNode) {
+        if (buttonContainer && buttonContainer.parentNode) {
           button.removeEventListener('click', handleButtonClick);
           button.removeEventListener('keydown', handleButtonClick);
-          button.remove();
+          deepButton.removeEventListener('click', handleDeepButtonClick);
+          deepButton.removeEventListener('keydown', handleDeepButtonClick);
+          buttonContainer.remove();
         }
       } catch (e) {
         console.warn('Button cleanup error:', e);
@@ -167,7 +212,7 @@ function injectButton(commentsSection) {
     });
     
   } catch (error) {
-    console.error('Failed to inject button:', error);
+    console.error('Failed to inject buttons:', error);
   }
 }
 
@@ -203,6 +248,81 @@ function findComments() {
   }
   
   return comments;
+}
+
+async function loadAllCommentsWithScrolling() {
+  console.log('Loading comments with scrolling to get more data...');
+  
+  try {
+    const commentsContainer = document.querySelector('#comments');
+    if (!commentsContainer) {
+      throw new Error('Comments container not found');
+    }
+    
+    // Store original scroll position
+    const originalScrollY = window.scrollY;
+    let comments = findComments();
+    console.log(`Initial comments found: ${comments.length}`);
+    
+    // Scroll down to load more comments (max 5 attempts)
+    const maxScrollAttempts = 5;
+    const scrollDelay = 2000; // 2 seconds between scrolls
+    
+    for (let i = 0; i < maxScrollAttempts; i++) {
+      const beforeScrollCount = comments.length;
+      
+      // Scroll to the bottom of the comments section
+      const commentsBottom = commentsContainer.getBoundingClientRect().bottom + window.scrollY;
+      window.scrollTo({
+        top: commentsBottom + 500,
+        behavior: 'smooth'
+      });
+      
+      // Wait for new comments to load
+      await new Promise(resolve => setTimeout(resolve, scrollDelay));
+      
+      // Look for "Load more" button and click it
+      const loadMoreButton = document.querySelector('ytd-continuation-item-renderer button') ||
+                           document.querySelector('[aria-label*="Show more"]') ||
+                           document.querySelector('[aria-label*="Load more"]');
+      
+      if (loadMoreButton && loadMoreButton.offsetParent !== null) {
+        console.log(`Clicking load more button (attempt ${i + 1})`);
+        loadMoreButton.click();
+        await new Promise(resolve => setTimeout(resolve, scrollDelay));
+      }
+      
+      // Get updated comment count
+      comments = findComments();
+      console.log(`After scroll attempt ${i + 1}: ${comments.length} comments`);
+      
+      // If we didn't get any new comments, stop scrolling
+      if (comments.length <= beforeScrollCount) {
+        console.log('No new comments loaded, stopping scroll attempts');
+        break;
+      }
+      
+      // If we have enough comments, stop early
+      if (comments.length >= 200) {
+        console.log('Reached comment limit, stopping scroll attempts');
+        break;
+      }
+    }
+    
+    // Restore original scroll position
+    window.scrollTo({
+      top: originalScrollY,
+      behavior: 'smooth'
+    });
+    
+    console.log(`Final deep load result: ${comments.length} comments`);
+    return comments.slice(0, 200); // Limit to prevent API overload
+    
+  } catch (error) {
+    console.error('Error in deep comment loading:', error);
+    // Fallback to regular comment loading
+    return findComments().slice(0, 100);
+  }
 }
 
 async function loadAllCommentsWithoutScrolling() {
@@ -312,7 +432,9 @@ function showLoading(commentCount) {
   loadingBox.setAttribute('aria-live', 'polite');
   
   const loadingText = document.createElement('div');
-  loadingText.textContent = `Generating summary based on ${Math.min(commentCount, 100)} comments...`;
+  const displayCount = Math.min(commentCount, 200);
+  const analysisType = commentCount > 100 ? 'Deep analysis' : 'Analysis';
+  loadingText.textContent = `${analysisType} - generating summary from ${displayCount} comments...`;
   
   const loadingSpinner = document.createElement('div');
   loadingSpinner.className = 'yt-summarize-spinner';
@@ -353,7 +475,9 @@ function showSummary(summary, commentCount, isError = false) {
   if (isError) {
     titleElement.textContent = 'Error';
   } else {
-    titleElement.textContent = `Comments Summary (${Math.min(commentCount, 100)} comments)`;
+    const displayCount = Math.min(commentCount, 200);
+    const analysisType = commentCount > 100 ? 'Deep Analysis' : 'Summary';
+    titleElement.textContent = `Comments ${analysisType} (${displayCount} comments)`;
   }
 
   const contentElement = document.createElement('div');
@@ -431,6 +555,110 @@ async function summarizeCommentsHandler() {
       button.disabled = false;
       button.textContent = 'Summarize Comments';
       button.setAttribute('aria-busy', 'false');
+    }
+  }
+}
+
+async function deepSummarizeCommentsHandler() {
+  console.log('Deep Summarize button clicked');
+
+  try {
+    // Disable both buttons and show processing state
+    const button = document.getElementById('summarize-comments-btn');
+    const deepButton = document.getElementById('deep-summarize-comments-btn');
+    
+    [button, deepButton].forEach(btn => {
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+      }
+    });
+    
+    if (deepButton) {
+      deepButton.textContent = 'Loading more...';
+    }
+    if (button) {
+      button.textContent = 'Processing...';
+    }
+
+    // Show initial loading message
+    const tempLoading = document.createElement('div');
+    tempLoading.id = 'yt-summarize-temp-loading';
+    tempLoading.className = 'yt-summarize-loading';
+    tempLoading.textContent = 'Scrolling to load more comments...';
+    
+    const commentsSection = document.querySelector('#comments');
+    if (commentsSection) {
+      commentsSection.insertBefore(tempLoading, commentsSection.firstChild);
+    }
+
+    console.log('Loading comments with deep analysis...');
+    const comments = await loadAllCommentsWithScrolling();
+
+    // Remove temporary loading message
+    if (tempLoading && tempLoading.parentNode) {
+      tempLoading.remove();
+    }
+
+    if (!comments || comments.length === 0) {
+      throw new Error('No comments found to summarize');
+    }
+
+    console.log(`Found ${comments.length} comments via deep analysis, showing loading state...`);
+    showLoading(comments.length);
+
+    console.log('Sending comments to background script...');
+    
+    // Add timeout to prevent hanging (longer for deep analysis)
+    const messagePromise = browser.runtime.sendMessage({
+      type: 'summarize',
+      comments: comments.slice(0, 200) // Allow more comments for deep analysis
+    });
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Request timed out')), 90000) // 90 seconds for deep analysis
+    );
+    
+    const response = await Promise.race([messagePromise, timeoutPromise]);
+    console.log('Received response from background script:', response);
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    if (response.summary) {
+      console.log('Displaying deep summary...');
+      showSummary(response.summary, comments.length, false);
+    } else {
+      throw new Error('No summary returned from API');
+    }
+
+  } catch (error) {
+    console.error('Error in deepSummarizeCommentsHandler:', error);
+    removeSummaryBox();
+    
+    // Remove temporary loading if it exists
+    const tempLoading = document.getElementById('yt-summarize-temp-loading');
+    if (tempLoading && tempLoading.parentNode) {
+      tempLoading.remove();
+    }
+    
+    showSummary(error.message, 0, true);
+  } finally {
+    // Re-enable both buttons
+    const button = document.getElementById('summarize-comments-btn');
+    const deepButton = document.getElementById('deep-summarize-comments-btn');
+    
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Summarize Comments';
+      button.setAttribute('aria-busy', 'false');
+    }
+    
+    if (deepButton) {
+      deepButton.disabled = false;
+      deepButton.textContent = 'Deep Summarize';
+      deepButton.setAttribute('aria-busy', 'false');
     }
   }
 }

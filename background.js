@@ -10,10 +10,10 @@ const RATE_LIMIT = {
 
 // Input validation constants
 const VALIDATION = {
-  maxComments: 100,
+  maxComments: 200, // Increased for deep analysis
   maxCommentLength: 1000,
   minCommentLength: 5,
-  maxTotalLength: 50000,
+  maxTotalLength: 100000, // Increased for deep analysis
   maxPromptLength: 100000, // Prevent prompt injection attacks
   maxApiKeyLength: 200
 };
@@ -26,7 +26,7 @@ const AI_PROVIDERS = {
     keyPattern: /^sk-ant-[a-zA-Z0-9\-_]+$/,
     keyPrefix: 'sk-ant-',
     model: 'claude-3-5-sonnet-20240620',
-    maxTokens: 1024
+    maxTokens: 2048 // Increased for deep analysis
   },
   openai: {
     name: 'OpenAI GPT-3.5 Turbo',
@@ -34,7 +34,7 @@ const AI_PROVIDERS = {
     keyPattern: /^sk-[a-zA-Z0-9]+$/,
     keyPrefix: 'sk-',
     model: 'gpt-3.5-turbo',
-    maxTokens: 1000
+    maxTokens: 2000 // Increased for deep analysis
   },
   gemini: {
     name: 'Google Gemini Pro',
@@ -42,7 +42,7 @@ const AI_PROVIDERS = {
     keyPattern: /^[A-Za-z0-9\-_]{39}$/,
     keyPrefix: '',
     model: 'gemini-pro',
-    maxTokens: 1000
+    maxTokens: 2000 // Increased for deep analysis
   }
 };
 
