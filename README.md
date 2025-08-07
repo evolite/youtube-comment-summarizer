@@ -44,10 +44,4 @@ A Firefox extension that summarizes YouTube video comments using AI (Claude, Ope
 
 ## 📄 **License**
 
-This project is licensed under the MIT License.
-
-## 🙏 **Acknowledgments**
-
-- YouTube for the platform
-- Anthropic, OpenAI, and Google for AI services
-- Firefox team for the WebExtensions API 
+This project is licensed under the MIT License. 
