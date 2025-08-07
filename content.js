@@ -56,6 +56,22 @@ const REPLY_SELECTORS = [
   'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]'
 ];
 
+// Cache for DOM queries to avoid repeated lookups
+const DOM_CACHE = {
+  commentsSection: null,
+  lastCacheTime: 0,
+  cacheTimeout: 5000 // 5 seconds cache
+};
+
+function getCachedCommentsSection() {
+  const now = Date.now();
+  if (!DOM_CACHE.commentsSection || (now - DOM_CACHE.lastCacheTime) > DOM_CACHE.cacheTimeout) {
+    DOM_CACHE.commentsSection = document.querySelector('#comments');
+    DOM_CACHE.lastCacheTime = now;
+  }
+  return DOM_CACHE.commentsSection;
+}
+
 // Global cleanup registry with size limits
 const cleanupRegistry = new Set();
 let isCleaningUp = false;
@@ -855,12 +871,14 @@ class NavigationHandler {
       }
       
       const commentsSection = await waitForCommentsSection();
-      injectButton(commentsSection);
-      
-      // Reset attempts on success
-      this.initializationAttempts = 0;
+      if (commentsSection) {
+        injectButton(commentsSection);
+        // Reset attempts on success
+        this.initializationAttempts = 0;
+      }
     } catch (error) {
       // Comments section not found, will retry
+      console.warn('Navigation: Comments section not found, will retry:', error.message);
     }
   }
 
@@ -890,14 +908,36 @@ const navigationHandler = new NavigationHandler();
 async function initializeExtension() {
   try {
     const commentsSection = await waitForCommentsSection();
-    injectButton(commentsSection);
+    if (commentsSection) {
+      injectButton(commentsSection);
+    }
   } catch (error) {
     // Comments section not found, will retry
+    console.warn('Comments section not found, will retry:', error.message);
+  }
+}
+
+// Initialize extension on page load with retry
+async function initializeWithRetry() {
+  let attempts = 0;
+  const maxAttempts = 3;
+  
+  while (attempts < maxAttempts) {
+    try {
+      await initializeExtension();
+      break; // Success, exit loop
+    } catch (error) {
+      attempts++;
+      if (attempts < maxAttempts) {
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
   }
 }
 
 // Initialize extension on page load
-initializeExtension();
+initializeWithRetry();
 
 // Set up navigation handling only on watch pages
 if (window.location.pathname === '/watch') {
