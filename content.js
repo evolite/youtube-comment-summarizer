@@ -29,7 +29,22 @@ const COMMENT_SELECTORS = [
   'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer #content-text',
   'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer .comment-text',
   'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer [data-comment-text]',
-  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]'
+  'ytd-comment-renderer ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]',
+  // Additional reply patterns
+  '.ytd-comment-renderer .ytd-comment-renderer #content-text',
+  '.ytd-comment-renderer .ytd-comment-renderer .comment-text',
+  '.ytd-comment-renderer .ytd-comment-renderer [data-comment-text]',
+  '.ytd-comment-renderer .ytd-comment-renderer yt-formatted-string[slot="content"]',
+  // More specific reply selectors
+  'ytd-comment-thread-renderer ytd-comment-renderer #content-text',
+  'ytd-comment-thread-renderer ytd-comment-renderer .comment-text',
+  'ytd-comment-thread-renderer ytd-comment-renderer [data-comment-text]',
+  'ytd-comment-thread-renderer ytd-comment-renderer yt-formatted-string[slot="content"]',
+  // Deep nested replies in threads
+  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer #content-text',
+  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer .comment-text',
+  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer [data-comment-text]',
+  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]'
 ];
 
 // Reply-specific selectors for better targeting
@@ -47,7 +62,17 @@ const REPLY_SELECTORS = [
   '.ytd-comment-renderer .ytd-comment-renderer #content-text',
   '.ytd-comment-renderer .ytd-comment-renderer .comment-text',
   '.ytd-comment-renderer .ytd-comment-renderer [data-comment-text]',
-  '.ytd-comment-renderer .ytd-comment-renderer yt-formatted-string[slot="content"]'
+  '.ytd-comment-renderer .ytd-comment-renderer yt-formatted-string[slot="content"]',
+  // Thread-specific reply selectors
+  'ytd-comment-thread-renderer ytd-comment-renderer #content-text',
+  'ytd-comment-thread-renderer ytd-comment-renderer .comment-text',
+  'ytd-comment-thread-renderer ytd-comment-renderer [data-comment-text]',
+  'ytd-comment-thread-renderer ytd-comment-renderer yt-formatted-string[slot="content"]',
+  // Deep nested replies in threads
+  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer #content-text',
+  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer .comment-text',
+  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer [data-comment-text]',
+  'ytd-comment-thread-renderer ytd-comment-renderer ytd-comment-renderer yt-formatted-string[slot="content"]'
 ];
 
 // Global cleanup registry with size limits
@@ -245,12 +270,15 @@ function injectButton(commentsSection) {
   }
 }
 
-function findComments() {
+async function findComments() {
   const comments = [];
   const seenTexts = new Set(); // Prevent duplicates
   
   // First, try to expand reply threads to capture more replies
-  expandReplyThreads();
+  await expandReplyThreads();
+  
+  // Debug: Check what reply elements we can find
+  debugReplyElements();
   
   for (const selector of COMMENT_SELECTORS) {
     try {
@@ -283,30 +311,69 @@ function findComments() {
   return comments;
 }
 
-function expandReplyThreads() {
+function debugReplyElements() {
+  console.log('=== DEBUG: Checking for reply elements ===');
+  
+  // Check for reply buttons
+  const replyButtons = document.querySelectorAll('[aria-label*="reply"], [aria-label*="Reply"], [aria-label*="replies"], [aria-label*="Replies"]');
+  console.log(`Reply buttons found: ${replyButtons.length}`);
+  replyButtons.forEach((btn, i) => {
+    console.log(`Button ${i}:`, btn.ariaLabel, btn.textContent);
+  });
+  
+  // Check for reply elements
+  const replyElements = document.querySelectorAll('ytd-comment-renderer ytd-comment-renderer, .ytd-comment-renderer .ytd-comment-renderer');
+  console.log(`Reply containers found: ${replyElements.length}`);
+  
+  // Check for reply text elements
+  const replyTextElements = document.querySelectorAll('ytd-comment-renderer ytd-comment-renderer #content-text, ytd-comment-renderer ytd-comment-renderer .comment-text');
+  console.log(`Reply text elements found: ${replyTextElements.length}`);
+  
+  // Check for thread-specific replies
+  const threadReplies = document.querySelectorAll('ytd-comment-thread-renderer ytd-comment-renderer');
+  console.log(`Thread reply elements found: ${threadReplies.length}`);
+  
+  console.log('=== END DEBUG ===');
+}
+
+async function expandReplyThreads() {
   try {
-    // Look for "View replies" buttons and click them
-    const viewRepliesButtons = document.querySelectorAll('[aria-label*="View replies"], [aria-label*="Show replies"], [aria-label*="Replies"]');
+    console.log('Starting reply thread expansion...');
     
-    viewRepliesButtons.forEach(button => {
+    // Look for "View replies" buttons and click them
+    const viewRepliesButtons = document.querySelectorAll('[aria-label*="View replies"], [aria-label*="Show replies"], [aria-label*="Replies"], [aria-label*="reply"]');
+    console.log(`Found ${viewRepliesButtons.length} "View replies" buttons`);
+    
+    for (const button of viewRepliesButtons) {
       if (button && button.offsetParent !== null && !button.disabled) {
-        console.log('Expanding reply thread');
+        console.log('Expanding reply thread:', button.textContent || button.ariaLabel);
         button.click();
+        // Small delay between clicks to avoid overwhelming the page
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
-    });
+    }
     
     // Also look for "Show more replies" buttons
-    const showMoreRepliesButtons = document.querySelectorAll('[aria-label*="Show more replies"], [aria-label*="Load more replies"]');
+    const showMoreRepliesButtons = document.querySelectorAll('[aria-label*="Show more replies"], [aria-label*="Load more replies"], [aria-label*="more replies"]');
+    console.log(`Found ${showMoreRepliesButtons.length} "Show more replies" buttons`);
     
-    showMoreRepliesButtons.forEach(button => {
+    for (const button of showMoreRepliesButtons) {
       if (button && button.offsetParent !== null && !button.disabled) {
-        console.log('Loading more replies');
+        console.log('Loading more replies:', button.textContent || button.ariaLabel);
         button.click();
+        // Small delay between clicks to avoid overwhelming the page
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
-    });
+    }
     
     // Wait a bit for replies to load
-    return new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('Waiting for replies to load...');
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Check if we successfully expanded any replies
+    const replyElements = document.querySelectorAll('ytd-comment-renderer ytd-comment-renderer #content-text, ytd-comment-renderer ytd-comment-renderer .comment-text');
+    console.log(`Found ${replyElements.length} reply elements after expansion`);
+    
   } catch (error) {
     console.warn('Error expanding reply threads:', error);
   }
@@ -323,7 +390,7 @@ async function loadAllCommentsWithScrolling() {
     
     // Store original scroll position
     const originalScrollY = window.scrollY;
-    let comments = findComments();
+    let comments = await findComments();
     console.log(`Initial comments found: ${comments.length}`);
     
     // Scroll down to load more comments (max 5 attempts)
@@ -361,7 +428,7 @@ async function loadAllCommentsWithScrolling() {
       }
       
       // Get updated comment count
-      comments = findComments();
+      comments = await findComments();
       console.log(`After scroll attempt ${i + 1}: ${comments.length} comments`);
       
       // If we didn't get any new comments, stop scrolling
@@ -397,7 +464,7 @@ async function loadAllCommentsWithoutScrolling() {
   
   try {
     // Get only the comments that are already visible in the DOM
-    const comments = findComments();
+    const comments = await findComments();
     console.log(`Found ${comments.length} visible comments`);
     
     if (comments.length === 0) {
