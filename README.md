@@ -19,8 +19,7 @@ A Firefox extension that summarizes YouTube video comments using AI (Claude, Ope
 2. Open the extension options page
 3. Select your preferred AI provider
 4. Enter your API key
-5. Optionally customize the system prompt
-6. Click "Save Settings"
+5. Click "Save Settings"
 
 ## 🎯 **Usage**
 
@@ -36,35 +35,12 @@ A Firefox extension that summarizes YouTube video comments using AI (Claude, Ope
 
 ## 🔧 **Features**
 
-### **Multiple AI Providers**
-- **Claude 3.5 Sonnet**: Anthropic's latest model
-- **OpenAI GPT-3.5 Turbo**: OpenAI's efficient model
-- **Google Gemini Pro**: Google's advanced model
-- Easy switching between providers
-
-### **Smart Comment Collection**
-- **Quick Mode**: Analyzes currently visible comments
-- **Deep Mode**: Scrolls to load more comments automatically
+- **Multiple AI Providers**: Claude, OpenAI, and Gemini
+- **Smart Comment Collection**: Quick mode for visible comments, deep mode for more
 - **Reply Inclusion**: Automatically includes comment replies
-- **Duplicate Prevention**: Removes duplicate comments
-
-### **Seamless YouTube Integration**
-- Works with YouTube's navigation
-- Buttons remain visible across video changes
-- Summaries are removed when navigating to new videos
-- Automatic recovery if buttons disappear
-
-### **Error Handling**
-- Automatic retry with increasing delays
-- Switch providers if one is overloaded
-- Built-in protection against API rate limits
-- Clear error messages with helpful advice
-
-### **Privacy & Security**
-- API keys stored securely in your browser
-- No user data is collected or transmitted
-- Comprehensive input validation
-- Sanitized API responses
+- **Seamless Integration**: Works with YouTube's navigation
+- **Error Handling**: Automatic retry and clear error messages
+- **Privacy**: API keys stored securely, no data collection
 
 ## 🧪 **Testing**
 
@@ -72,22 +48,6 @@ A Firefox extension that summarizes YouTube video comments using AI (Claude, Ope
 2. Scroll to comments section
 3. Click "Summarize Comments" or "Deep Summarize"
 4. Verify summary appears correctly
-5. Test navigation between videos
-
-## 🚀 **Future Enhancements**
-
-- Advanced comment filtering
-- Summary export functionality
-- Custom themes and UI customization
-- Batch processing for multiple videos
-- Analytics dashboard
-
-## 🤝 **Contributing**
-
-1. Fork the repository
-2. Create a feature branch
-3. Follow the established code patterns
-4. Submit a pull request
 
 ## 📄 **License**
 
