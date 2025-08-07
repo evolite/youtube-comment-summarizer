@@ -1,7 +1,7 @@
 // options.js
 
 // Default system prompt
-const DEFAULT_SYSTEM_PROMPT = 'Please provide a concise, flowing summary of the key themes and overall sentiment from the following YouTube comments (including replies). Write in a natural, readable paragraph format without bullet points or numbered lists. Focus on the main themes and overall sentiment:\n\n';
+const DEFAULT_SYSTEM_PROMPT = 'Please provide a concise summary of the YouTube video comments below in a single short paragraph (2-4 sentences). Focus on the main themes and overall sentiment. Write in a natural, flowing style without bullet points or numbered lists. Keep it brief and easy to read.';
 
 // AI Providers (will be loaded from background script)
 let AI_PROVIDERS = {};

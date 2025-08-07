@@ -267,7 +267,7 @@ class APIService {
   }
 
   getDefaultSystemPrompt() {
-    return `Please provide a comprehensive summary of the YouTube video comments below. Focus on the main themes, sentiments, and key points discussed. Include both positive and negative feedback, and highlight any recurring topics or concerns. Make the summary easy to read and well-structured.`;
+    return `Please provide a concise summary of the YouTube video comments below in a single short paragraph (2-4 sentences). Focus on the main themes and overall sentiment. Write in a natural, flowing style without bullet points or numbered lists. Keep it brief and easy to read.`;
   }
 }
 
