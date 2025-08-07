@@ -485,6 +485,8 @@ class ContentScriptController {
    * Removes summary box
    */
   removeSummaryBox() {
+    console.log('Removing summary elements...');
+    
     const elements = [
       'yt-summarize-summary',
       'yt-summarize-loading',
@@ -494,21 +496,39 @@ class ContentScriptController {
     elements.forEach(id => {
       const element = document.getElementById(id);
       if (element) {
+        console.log(`Removing element with id: ${id}`);
         element.remove();
       }
     });
     
     // Also remove any orphaned elements with our classes
-    const orphanedElements = document.querySelectorAll('.yt-summarize-box, .yt-summarize-loading');
-    orphanedElements.forEach(element => element.remove());
+    const orphanedElements = document.querySelectorAll('.yt-summarize-box, .yt-summarize-loading, .yt-summarize-button-container');
+    orphanedElements.forEach(element => {
+      console.log(`Removing orphaned element:`, element.className);
+      element.remove();
+    });
+    
+    // Remove any elements with our data attributes
+    const dataElements = document.querySelectorAll('[data-error="true"]');
+    dataElements.forEach(element => {
+      if (element.classList.contains('yt-summarize-box')) {
+        console.log('Removing error element');
+        element.remove();
+      }
+    });
   }
 
   /**
    * Handles navigation
    */
   handleNavigation() {
+    console.log('Navigation detected, resetting extension...');
     this.isInitialized = false;
     this.removeSummaryBox();
+    
+    // Clear any ongoing operations
+    this.setButtonProcessingState(false);
+    this.removeTemporaryLoading();
     
     // Re-initialize after a short delay
     setTimeout(() => this.initialize(), 500);
@@ -609,6 +629,7 @@ class NavigationHandler {
     this.navigationTimeout = setTimeout(() => {
       try {
         if (window.location.pathname === '/watch') {
+          console.log('Watch page detected, triggering navigation reset');
           this.controller.handleNavigation();
         }
       } catch (error) {
@@ -687,4 +708,16 @@ document.addEventListener('visibilitychange', () => {
       console.error('Visibility change cleanup error:', error);
     }
   }
-}, { passive: true }); 
+}, { passive: true });
+
+// Additional URL change detection
+let currentUrl = window.location.href;
+setInterval(() => {
+  if (window.location.href !== currentUrl) {
+    console.log('URL changed from', currentUrl, 'to', window.location.href);
+    currentUrl = window.location.href;
+    if (window.location.pathname === '/watch') {
+      controller.handleNavigation();
+    }
+  }
+}, 1000); 
