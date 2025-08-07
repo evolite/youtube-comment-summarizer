@@ -42,13 +42,6 @@ A Firefox extension that summarizes YouTube video comments using AI (Claude, Ope
 - **Error Handling**: Automatic retry and clear error messages
 - **Privacy**: API keys stored securely, no data collection
 
-## 🧪 **Testing**
-
-1. Navigate to any YouTube video
-2. Scroll to comments section
-3. Click "Summarize Comments" or "Deep Summarize"
-4. Verify summary appears correctly
-
 ## 📄 **License**
 
 This project is licensed under the MIT License.
