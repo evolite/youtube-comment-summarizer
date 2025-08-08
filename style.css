@@ -283,6 +283,51 @@
   margin-right: var(--yt-spacing-sm);
 }
 
+/* Deep progress indicator */
+.yt-summarize-deep-progress {
+  margin: var(--yt-spacing-md) 0;
+  padding: var(--yt-spacing-md);
+  background: var(--yt-spec-brand-background-primary);
+  border-radius: var(--yt-border-radius-md);
+  font-family: var(--yt-font-family);
+  font-size: var(--yt-font-size-sm);
+  color: var(--yt-spec-text-primary);
+}
+
+.yt-summarize-progress-bar {
+  height: 4px;
+  background: var(--yt-spec-brand-background-secondary);
+  border-radius: 2px;
+  margin-bottom: var(--yt-spacing-sm);
+  transition: width 0.3s ease;
+}
+
+.yt-summarize-progress-bar::before {
+  content: '';
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--yt-spec-brand-background-primary);
+  border-radius: 2px;
+  animation: progress-fill 0.3s ease;
+}
+
+@keyframes progress-fill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+.yt-summarize-progress-message {
+  font-weight: 500;
+  margin-bottom: var(--yt-spacing-xs);
+}
+
+.yt-summarize-progress-time {
+  font-size: var(--yt-font-size-xs);
+  color: var(--yt-spec-text-secondary);
+  opacity: 0.8;
+}
+
 /* Temporary loading message */
 #yt-summarize-temp-loading {
   position: fixed;

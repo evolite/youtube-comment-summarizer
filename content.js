@@ -260,6 +260,11 @@ class ContentScriptController {
       const maxExpansionAttempts = 30; // Try for about 30 seconds
       
       while (expansionAttempts < maxExpansionAttempts) {
+        // Update progress
+        const progressPercent = Math.min(95, Math.round((expansionAttempts / maxExpansionAttempts) * 90));
+        const currentCommentsCount = await this.loadVisibleComments();
+        this.showDeepProgress(`Expanding comments... (${currentCommentsCount.length} found)`, progressPercent);
+        
         let foundNewContent = false;
         
         // Look for "Load more" buttons in comments
@@ -314,10 +319,13 @@ class ContentScriptController {
       }
       
       console.log('Comments expansion completed');
+      this.showDeepProgress('Comment expansion completed!', 100);
       
     } finally {
       // Restore scroll position
       window.scrollTo(0, originalScrollTop);
+      // Clean up progress indicator
+      this.removeDeepProgress();
     }
     
     // Remove duplicates
@@ -327,6 +335,64 @@ class ContentScriptController {
   }
 
 
+
+  /**
+   * Shows progress for deep summarize operation
+   */
+  showDeepProgress(message, progressPercent) {
+    // Remove existing progress indicator
+    const existingProgress = document.getElementById('yt-summarize-deep-progress');
+    if (existingProgress) {
+      existingProgress.remove();
+    }
+    
+    // Create progress container
+    const progressContainer = document.createElement('div');
+    progressContainer.id = 'yt-summarize-deep-progress';
+    progressContainer.className = 'yt-summarize-deep-progress';
+    
+    // Create progress bar
+    const progressBar = document.createElement('div');
+    progressBar.className = 'yt-summarize-progress-bar';
+    progressBar.style.width = `${progressPercent}%`;
+    
+    // Create message
+    const messageElement = document.createElement('div');
+    messageElement.className = 'yt-summarize-progress-message';
+    messageElement.textContent = message;
+    
+    // Create time remaining estimate
+    const timeElement = document.createElement('div');
+    timeElement.className = 'yt-summarize-progress-time';
+    const remainingSeconds = Math.max(0, Math.round((100 - progressPercent) * 0.3)); // Rough estimate
+    timeElement.textContent = remainingSeconds > 0 ? `~${remainingSeconds}s remaining` : 'Completing...';
+    
+    // Assemble
+    progressContainer.appendChild(progressBar);
+    progressContainer.appendChild(messageElement);
+    progressContainer.appendChild(timeElement);
+    
+    // Insert into page
+    const commentsSection = document.querySelector('#comments');
+    if (commentsSection) {
+      const buttonContainer = commentsSection.querySelector('.yt-summarize-button-container');
+      if (buttonContainer) {
+        buttonContainer.parentNode.insertBefore(progressContainer, buttonContainer.nextSibling);
+      } else {
+        commentsSection.insertBefore(progressContainer, commentsSection.firstChild);
+      }
+    }
+  }
+
+  /**
+   * Removes deep progress indicator
+   */
+  removeDeepProgress() {
+    const progressElement = document.getElementById('yt-summarize-deep-progress');
+    if (progressElement) {
+      progressElement.remove();
+    }
+  }
 
   /**
    * Validates and processes comments
@@ -456,7 +522,8 @@ class ContentScriptController {
     const elements = [
       'yt-summarize-summary',
       'yt-summarize-loading',
-      'yt-summarize-temp-loading'
+      'yt-summarize-temp-loading',
+      'yt-summarize-deep-progress'
     ];
     
     elements.forEach(id => {
@@ -467,7 +534,7 @@ class ContentScriptController {
     });
     
     // Also remove any orphaned elements with our classes (but NOT buttons)
-    const orphanedElements = document.querySelectorAll('.yt-summarize-box, .yt-summarize-loading');
+    const orphanedElements = document.querySelectorAll('.yt-summarize-box, .yt-summarize-loading, .yt-summarize-deep-progress');
     orphanedElements.forEach(element => {
       element.remove();
     });
