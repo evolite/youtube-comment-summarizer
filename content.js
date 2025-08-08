@@ -271,7 +271,7 @@ class ContentScriptController {
               button.click();
               foundNewContent = true;
               console.log('Clicked load more button');
-              await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); // Random delay 1-1.5s
+              await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 300)); // Reduced delay 0.5-0.8s
             } catch (error) {
               console.log('Failed to click load more button');
             }
@@ -283,7 +283,7 @@ class ContentScriptController {
         // Human-like scrolling - scroll slowly and naturally
         const currentHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
         const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
-        const scrollStep = 300 + Math.random() * 200; // Random step size 300-500px
+        const scrollStep = 600 + Math.random() * 400; // Increased step size 600-1000px (2x)
         
         // Scroll in smaller steps like a human would
         const targetScrollY = Math.min(currentScrollY + scrollStep, currentHeight);
@@ -293,7 +293,7 @@ class ContentScriptController {
         });
         
         // Wait like a human would between scrolls
-        await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000)); // 1.5-2.5s delay
+        await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 500)); // Reduced delay 0.8-1.3s
         
         // Check if we got more comments
         const currentComments = await this.loadVisibleComments();
@@ -310,7 +310,7 @@ class ContentScriptController {
         
         expansionAttempts++;
         // Random delay between attempts like a human
-        await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
+        await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 300));
       }
       
       console.log('Comments expansion completed');
