@@ -237,11 +237,9 @@ class ContentScriptController {
   async loadCommentsWithScrolling() {
     const originalScrollTop = window.scrollY;
     const comments = [];
-    let attempts = 0;
-    const maxAttempts = 25; // Good number of attempts
     
     try {
-      console.log('Starting deep comment loading with bottom scrolling...');
+      console.log('Starting deep comment loading with continuous scrolling...');
       
       // First, scroll to the comments section
       const commentsSection = document.querySelector('#comments');
@@ -251,64 +249,44 @@ class ContentScriptController {
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
       
-      let lastCommentCount = 0;
-      let noProgressCount = 0;
+      // Get initial comments
+      const initialComments = await this.loadVisibleComments();
+      comments.push(...initialComments);
+      console.log(`Initial comments found: ${initialComments.length}`);
       
-      while (attempts < maxAttempts) {
-        // Get current visible comments
-        const currentComments = await this.loadVisibleComments();
-        comments.push(...currentComments);
-        
-        console.log(`Attempt ${attempts + 1}: Found ${currentComments.length} comments (total: ${comments.length})`);
-        
-        // Check if we're making progress
-        if (comments.length === lastCommentCount) {
-          noProgressCount++;
-          console.log(`No progress for ${noProgressCount} attempts`);
-          if (noProgressCount >= 3) {
-            console.log('No progress for 3 attempts, stopping...');
-            break;
+      // Start continuous scrolling for 15 seconds
+      console.log('Starting continuous scroll for 15 seconds...');
+      const scrollDuration = 15000; // 15 seconds
+      const scrollInterval = 100; // Scroll every 100ms
+      const totalIntervals = scrollDuration / scrollInterval;
+      
+      let intervalsCompleted = 0;
+      
+      const scrollPromise = new Promise((resolve) => {
+        const scrollTimer = setInterval(() => {
+          // Scroll to bottom
+          const currentHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+          window.scrollTo(0, currentHeight);
+          
+          intervalsCompleted++;
+          
+          if (intervalsCompleted >= totalIntervals) {
+            clearInterval(scrollTimer);
+            resolve();
           }
-        } else {
-          noProgressCount = 0;
-        }
-        lastCommentCount = comments.length;
-        
-        // Get current page dimensions
-        const currentHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
-        const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
-        const viewportHeight = window.innerHeight;
-        
-        console.log(`Current page height: ${currentHeight}, Current scroll Y: ${currentScrollY}, Viewport height: ${viewportHeight}`);
-        
-        // Scroll to the very bottom of the page
-        console.log(`Scrolling to bottom of page (height: ${currentHeight})...`);
-        window.scrollTo(0, currentHeight);
-        
-        // Wait for content to load and scrollbar to potentially extend
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Check if new content was loaded (scrollbar extended)
-        const newHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
-        const newScrollY = window.pageYOffset || document.documentElement.scrollTop;
-        
-        console.log(`New page height: ${newHeight} (was: ${currentHeight}), New scroll Y: ${newScrollY}`);
-        
-        // If the page got longer, scroll to the new bottom
-        if (newHeight > currentHeight) {
-          console.log('Page extended, scrolling to new bottom...');
-          window.scrollTo(0, newHeight);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-        
-        // If we've found a good number of comments, we can stop early
-        if (comments.length > 400) {
-          console.log('Found sufficient comments, stopping early...');
-          break;
-        }
-        
-        attempts++;
-      }
+        }, scrollInterval);
+      });
+      
+      // Wait for the continuous scrolling to complete
+      await scrollPromise;
+      console.log('Continuous scrolling completed');
+      
+      // Get final comments after scrolling
+      const finalComments = await this.loadVisibleComments();
+      comments.push(...finalComments);
+      
+      console.log(`Final comments found: ${finalComments.length}`);
+      
     } finally {
       // Restore scroll position
       window.scrollTo(0, originalScrollTop);
@@ -316,7 +294,7 @@ class ContentScriptController {
     
     // Remove duplicates
     const uniqueComments = [...new Set(comments)];
-    console.log(`Found ${uniqueComments.length} unique comments with bottom scrolling`);
+    console.log(`Found ${uniqueComments.length} unique comments with continuous scrolling`);
     return uniqueComments;
   }
 
