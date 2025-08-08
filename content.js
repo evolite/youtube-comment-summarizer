@@ -278,21 +278,7 @@ class ContentScriptController {
           }
         }
         
-        // Look for "View replies" buttons
-        const replyButtons = document.querySelectorAll('ytd-button-renderer, ytd-comment-thread-renderer');
-        for (const button of replyButtons) {
-          const buttonText = button.textContent?.toLowerCase() || '';
-          if (buttonText.includes('view replies') || buttonText.includes('reply')) {
-            try {
-              button.click();
-              foundNewContent = true;
-              console.log('Clicked view replies button');
-              await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 400)); // Random delay 0.8-1.2s
-            } catch (error) {
-              console.log('Failed to click view replies button');
-            }
-          }
-        }
+
         
         // Human-like scrolling - scroll slowly and naturally
         const currentHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
@@ -340,56 +326,7 @@ class ContentScriptController {
     return uniqueComments;
   }
 
-  /**
-   * Expands reply threads to get more comments
-   */
-  async expandReplyThreads() {
-    console.log('Expanding reply threads...');
-    
-    const replySelectors = [
-      'ytd-button-renderer[aria-label*="View replies"]',
-      'ytd-button-renderer[aria-label*="Show replies"]',
-      'button[aria-label*="View replies"]',
-      'button[aria-label*="Show replies"]',
-      '[aria-label*="View replies"]',
-      '[aria-label*="Show replies"]'
-    ];
-    
-    let expandedCount = 0;
-    const maxExpansions = 10; // Reduced to focus on scrolling
-    
-    for (let i = 0; i < maxExpansions; i++) {
-      let replyButton = null;
-      
-      // Try each selector
-      for (const selector of replySelectors) {
-        const buttons = document.querySelectorAll(selector);
-        for (const button of buttons) {
-          // Check if this button hasn't been clicked yet and is visible
-          if (!button.disabled && 
-              button.offsetParent !== null && 
-              button.style.display !== 'none' &&
-              button.style.visibility !== 'hidden') {
-            replyButton = button;
-            break;
-          }
-        }
-        if (replyButton) break;
-      }
-      
-      if (replyButton) {
-        console.log(`Expanding reply thread ${expandedCount + 1}...`);
-        replyButton.click();
-        expandedCount++;
-        await new Promise(resolve => setTimeout(resolve, 300)); // Shorter wait
-      } else {
-        console.log('No more reply buttons to expand');
-        break;
-      }
-    }
-    
-    console.log(`Expanded ${expandedCount} reply threads`);
-  }
+
 
   /**
    * Validates and processes comments

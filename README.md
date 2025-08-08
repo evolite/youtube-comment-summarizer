@@ -26,7 +26,6 @@ A Firefox extension that summarizes YouTube video comments using AI (Claude, Ope
 ### **Quick Summarize**
 - Click "Summarize Comments" to analyze visible comments
 - Fast response time
-- Includes replies to comments
 
 ### **Deep Summarize**
 - Click "Deep Summarize" for comprehensive analysis
@@ -37,7 +36,6 @@ A Firefox extension that summarizes YouTube video comments using AI (Claude, Ope
 
 - **Multiple AI Providers**: Claude, OpenAI, and Gemini
 - **Smart Comment Collection**: Quick mode for visible comments, deep mode for more
-- **Reply Inclusion**: Automatically includes comment replies
 - **Seamless Integration**: Works with YouTube's navigation
 - **Error Handling**: Automatic retry and clear error messages
 - **Privacy**: API keys stored securely, no data collection
