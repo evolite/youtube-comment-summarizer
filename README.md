@@ -40,6 +40,10 @@ A Firefox extension that summarizes YouTube video comments using AI (Claude, Ope
 - **Error Handling**: Automatic retry and clear error messages
 - **Privacy**: API keys stored securely, no data collection
 
+## 📋 **Release Notes**
+
+For detailed information about what's new in each version, check out our [Release Notes](RELEASE_NOTES.md).
+
 ## 📄 **License**
 
 This project is licensed under the MIT License. 
