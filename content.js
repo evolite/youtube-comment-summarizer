@@ -239,7 +239,7 @@ class ContentScriptController {
     const comments = [];
     
     try {
-      console.log('Starting deep comment loading with continuous scrolling...');
+      console.log('Starting deep comment loading with targeted expansion...');
       
       // First, scroll to the comments section
       const commentsSection = document.querySelector('#comments');
@@ -254,38 +254,68 @@ class ContentScriptController {
       comments.push(...initialComments);
       console.log(`Initial comments found: ${initialComments.length}`);
       
-      // Start continuous scrolling for 15 seconds
-      console.log('Starting continuous scroll for 15 seconds...');
-      const scrollDuration = 15000; // 15 seconds
-      const scrollInterval = 100; // Scroll every 100ms
-      const totalIntervals = scrollDuration / scrollInterval;
+      // Try to click "Load more" buttons and expand replies
+      console.log('Attempting to expand comments section...');
+      let expansionAttempts = 0;
+      const maxExpansionAttempts = 50; // Try for about 10 seconds
       
-      let intervalsCompleted = 0;
-      
-      const scrollPromise = new Promise((resolve) => {
-        const scrollTimer = setInterval(() => {
-          // Scroll to bottom
-          const currentHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
-          window.scrollTo(0, currentHeight);
-          
-          intervalsCompleted++;
-          
-          if (intervalsCompleted >= totalIntervals) {
-            clearInterval(scrollTimer);
-            resolve();
+      while (expansionAttempts < maxExpansionAttempts) {
+        let foundNewContent = false;
+        
+        // Look for "Load more" buttons in comments
+        const loadMoreButtons = document.querySelectorAll('ytd-button-renderer, ytd-comments, ytd-comment-thread-renderer');
+        for (const button of loadMoreButtons) {
+          const buttonText = button.textContent?.toLowerCase() || '';
+          if (buttonText.includes('load more') || buttonText.includes('show more')) {
+            try {
+              button.click();
+              foundNewContent = true;
+              console.log('Clicked load more button');
+              await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (error) {
+              console.log('Failed to click load more button');
+            }
           }
-        }, scrollInterval);
-      });
+        }
+        
+        // Look for "View replies" buttons
+        const replyButtons = document.querySelectorAll('ytd-button-renderer, ytd-comment-thread-renderer');
+        for (const button of replyButtons) {
+          const buttonText = button.textContent?.toLowerCase() || '';
+          if (buttonText.includes('view replies') || buttonText.includes('reply')) {
+            try {
+              button.click();
+              foundNewContent = true;
+              console.log('Clicked view replies button');
+              await new Promise(resolve => setTimeout(resolve, 300));
+            } catch (error) {
+              console.log('Failed to click view replies button');
+            }
+          }
+        }
+        
+        // Also scroll the page to trigger lazy loading
+        const currentHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+        window.scrollTo(0, currentHeight);
+        
+        // Check if we got more comments
+        const currentComments = await this.loadVisibleComments();
+        if (currentComments.length > comments.length) {
+          console.log(`Found ${currentComments.length - comments.length} new comments`);
+          comments.push(...currentComments.slice(comments.length));
+        }
+        
+        // If no new content found for a while, stop
+        if (!foundNewContent && expansionAttempts > 10) {
+          console.log('No new content found, stopping expansion');
+          break;
+        }
+        
+        expansionAttempts++;
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
       
-      // Wait for the continuous scrolling to complete
-      await scrollPromise;
-      console.log('Continuous scrolling completed');
-      
-      // Get final comments after scrolling
-      const finalComments = await this.loadVisibleComments();
-      comments.push(...finalComments);
-      
-      console.log(`Final comments found: ${finalComments.length}`);
+      console.log('Comments expansion completed');
       
     } finally {
       // Restore scroll position
@@ -294,7 +324,7 @@ class ContentScriptController {
     
     // Remove duplicates
     const uniqueComments = [...new Set(comments)];
-    console.log(`Found ${uniqueComments.length} unique comments with continuous scrolling`);
+    console.log(`Found ${uniqueComments.length} unique comments with targeted expansion`);
     return uniqueComments;
   }
 
