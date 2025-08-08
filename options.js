@@ -1,7 +1,7 @@
 // options.js
 
 // Default system prompt
-const DEFAULT_SYSTEM_PROMPT = 'Please provide a concise summary of the YouTube video comments below in a single short paragraph (2-4 sentences). Focus on the main themes and overall sentiment. Write in a natural, flowing style without bullet points or numbered lists. Keep it brief and easy to read.';
+const DEFAULT_SYSTEM_PROMPT = 'Analyze the comments below. Your entire response must follow this exact format:\n\n[POSITIVE SUMMARY]: {Insert 2-3 sentence summary of positive sentiments here, in a witty tone}\n\n[NEGATIVE SUMMARY]: {Insert 2-3 sentence summary of negative sentiments here, in a witty tone}\n\nDo not include any text or characters before "[POSITIVE SUMMARY]:" or after the negative summary paragraph.';
 
 // AI Providers (will be loaded from background script)
 let AI_PROVIDERS = {};
