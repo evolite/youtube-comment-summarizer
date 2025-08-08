@@ -254,10 +254,10 @@ class ContentScriptController {
       comments.push(...initialComments);
       console.log(`Initial comments found: ${initialComments.length}`);
       
-      // Try to click "Load more" buttons and expand replies
-      console.log('Attempting to expand comments section...');
+      // Try to expand comments with human-like scrolling
+      console.log('Attempting to expand comments section with human-like scrolling...');
       let expansionAttempts = 0;
-      const maxExpansionAttempts = 50; // Try for about 10 seconds
+      const maxExpansionAttempts = 30; // Try for about 30 seconds
       
       while (expansionAttempts < maxExpansionAttempts) {
         let foundNewContent = false;
@@ -271,7 +271,7 @@ class ContentScriptController {
               button.click();
               foundNewContent = true;
               console.log('Clicked load more button');
-              await new Promise(resolve => setTimeout(resolve, 500));
+              await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); // Random delay 1-1.5s
             } catch (error) {
               console.log('Failed to click load more button');
             }
@@ -287,16 +287,27 @@ class ContentScriptController {
               button.click();
               foundNewContent = true;
               console.log('Clicked view replies button');
-              await new Promise(resolve => setTimeout(resolve, 300));
+              await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 400)); // Random delay 0.8-1.2s
             } catch (error) {
               console.log('Failed to click view replies button');
             }
           }
         }
         
-        // Also scroll the page to trigger lazy loading
+        // Human-like scrolling - scroll slowly and naturally
         const currentHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
-        window.scrollTo(0, currentHeight);
+        const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollStep = 300 + Math.random() * 200; // Random step size 300-500px
+        
+        // Scroll in smaller steps like a human would
+        const targetScrollY = Math.min(currentScrollY + scrollStep, currentHeight);
+        window.scrollTo({
+          top: targetScrollY,
+          behavior: 'smooth'
+        });
+        
+        // Wait like a human would between scrolls
+        await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000)); // 1.5-2.5s delay
         
         // Check if we got more comments
         const currentComments = await this.loadVisibleComments();
@@ -306,13 +317,14 @@ class ContentScriptController {
         }
         
         // If no new content found for a while, stop
-        if (!foundNewContent && expansionAttempts > 10) {
+        if (!foundNewContent && expansionAttempts > 15) {
           console.log('No new content found, stopping expansion');
           break;
         }
         
         expansionAttempts++;
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Random delay between attempts like a human
+        await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
       }
       
       console.log('Comments expansion completed');
