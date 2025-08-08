@@ -288,7 +288,7 @@ class ContentScriptController {
         // Human-like scrolling - scroll slowly and naturally
         const currentHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
         const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
-        const scrollStep = 600 + Math.random() * 400; // Increased step size 600-1000px (2x)
+        const scrollStep = 1200 + Math.random() * 800; // Doubled step size 1200-2000px (4x original)
         
         // Scroll in smaller steps like a human would
         const targetScrollY = Math.min(currentScrollY + scrollStep, currentHeight);
