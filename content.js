@@ -276,7 +276,7 @@ class ContentScriptController {
               button.click();
               foundNewContent = true;
               console.log('Clicked load more button');
-              await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 300)); // Reduced delay 0.5-0.8s
+              await new Promise(resolve => setTimeout(resolve, 250 + Math.random() * 150)); // Doubled speed 0.25-0.4s
             } catch (error) {
               console.log('Failed to click load more button');
             }
@@ -298,7 +298,7 @@ class ContentScriptController {
         });
         
         // Wait like a human would between scrolls
-        await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 500)); // Reduced delay 0.8-1.3s
+        await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 250)); // Doubled speed 0.4-0.65s
         
         // Check if we got more comments
         const currentComments = await this.loadVisibleComments();
@@ -315,7 +315,7 @@ class ContentScriptController {
         
         expansionAttempts++;
         // Random delay between attempts like a human
-        await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 300));
+        await new Promise(resolve => setTimeout(resolve, 150 + Math.random() * 150));
       }
       
       console.log('Comments expansion completed');
